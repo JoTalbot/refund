@@ -17,7 +17,7 @@
 
 ## Not done
 
-- `pg.Pool` is not opened here; DSN must come from the secret manager.
+- Live `pg.Pool` opens only when `openPostgres`/`bindPgPool` succeeds against a secret-injected DSN.
 - Temporal Cloud client is not bound.
 - No Shopify connector.
 - No AliExpress Open Platform client (`aliexpress-ua` stays `draft`).

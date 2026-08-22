@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { oidcFromEnv } from "@refund/domain";
+import { SqlJobStore } from "@refund/persist";
 import { createHandler, type ApiRequest } from "./http.js";
 import { createRuntime } from "./runtime.js";
 import { readPublicFile } from "./static.js";
@@ -90,6 +91,7 @@ export async function startServer() {
     store: runtime.store,
     persistence: runtime.persistence,
     oidc: oidcFromEnv(),
+    jobs: new SqlJobStore(runtime.sql),
   });
   const httpServer = createHttpServer(handle);
   await new Promise<void>((resolve) => {

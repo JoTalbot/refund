@@ -5,8 +5,9 @@ import {
   type Actor,
   type OidcVerifierOptions,
 } from "@refund/domain";
-import type { SqlPlatformStore } from "@refund/persist";
+import type { SqlJobStore, SqlPlatformStore } from "@refund/persist";
 import type { Platform } from "./platform.js";
+import { runImportWorkflow } from "./worker.js";
 
 export interface ApiRequest {
   method: string;
@@ -30,6 +31,7 @@ export function createHandler(
     oidc?: OidcVerifierOptions;
     persistence?: string;
     store?: SqlPlatformStore;
+    jobs?: SqlJobStore;
   },
 ) {
   return async function handle(request: ApiRequest): Promise<ApiResponse> {
@@ -56,7 +58,12 @@ export function createHandler(
 async function route(
   platform: Platform,
   request: ApiRequest,
-  options: { allowDevActor: boolean; oidc?: OidcVerifierOptions; persistence?: string },
+  options: {
+    allowDevActor: boolean;
+    oidc?: OidcVerifierOptions;
+    persistence?: string;
+    jobs?: SqlJobStore;
+  },
 ): Promise<ApiResponse> {
   const method = request.method.toUpperCase();
   const path = normalizePath(request.path);
@@ -82,6 +89,22 @@ async function route(
 
   if (method === "GET" && path === "/v1/me") {
     return json(200, actor);
+  }
+
+  if (method === "POST" && path === "/v1/jobs/import") {
+    if (!options.jobs) {
+      return json(503, { error: "jobs_unavailable", message: "job runtime is not bound" });
+    }
+    const body = asRecord(request.body);
+    const result = await runImportWorkflow(platform, options.jobs, {
+      actor,
+      sourceId: String(body.source_id ?? ""),
+      document: body.document,
+      idempotencyKey: String(body.idempotency_key ?? header(request.headers, "idempotency-key")),
+      ownerId: actor.id,
+      traceId,
+    });
+    return json(202, result);
   }
 
   if (method === "GET" && path === "/v1/sources") {

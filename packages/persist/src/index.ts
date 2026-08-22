@@ -14,7 +14,7 @@ export { emptySnapshot } from "./snapshot.js";
 export type { PlatformSnapshot } from "./snapshot.js";
 export { EnvSecretResolver, redactSecret, resolveDatabaseUrl } from "./secrets.js";
 export type { SecretResolver } from "./secrets.js";
-export { PgSqlQuery, isPostgresUrl } from "./pg-driver.js";
+export { PgSqlQuery, isPostgresUrl, bindPgPool } from "./pg-driver.js";
 export {
   LeaseWorkflowRuntime,
   TemporalCloudRuntime,

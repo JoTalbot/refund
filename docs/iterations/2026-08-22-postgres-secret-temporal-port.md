@@ -9,6 +9,8 @@ Resolve the database DSN from a secret id (never commit the URL) and expose a Te
 - `EnvSecretResolver` / `resolveDatabaseUrl` + password redaction.
 - `PgSqlQuery` adapter; runtime uses injected SQL as `postgres` or falls back to PGlite.
 - Unbound resolved DSN fails closed instead of printing the URL.
+- `bindPgPool` + `openPostgres` hook so a real `pg.Pool` can be attached after the secret resolves.
+- `POST /v1/jobs/import` starts a durable import when the job store is bound.
 - `LeaseWorkflowRuntime` vs `TemporalCloudRuntime` (refuses to pretend it is connected).
 - `@refund/worker` describes lease/temporal mode and an empty connector list.
 

@@ -159,6 +159,15 @@ describe("API MVP", () => {
     expect((await handle({ method: "GET", path: "/health", headers: {}, query: {}, body: null })).body).toMatchObject({
       ok: true,
     });
+    expect(
+      (
+        await merchant("POST", "/v1/jobs/import", {
+          source_id: "aliexpress-ua",
+          document: {},
+          idempotency_key: "job-import-unbound-0001",
+        })
+      ).status,
+    ).toBe(503);
     expect((await customer("GET", "/v1/me")).body).toMatchObject({ role: "customer", tenantId: TENANT });
     expect(((await customer("GET", "/v1/return-cases")).body as { items: unknown[] }).items.length).toBeGreaterThan(0);
   });
