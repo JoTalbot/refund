@@ -1,7 +1,9 @@
 import {
   UnauthorizedError,
+  actorFromAccessToken,
   actorFromDevHeaders,
   type Actor,
+  type OidcVerifierOptions,
 } from "@refund/domain";
 import type { Platform } from "./platform.js";
 
@@ -20,10 +22,13 @@ export interface ApiResponse {
 
 const UUID = "[0-9a-fA-F-]{36}";
 
-export function createHandler(platform: Platform, options: { allowDevActor: boolean }) {
-  return function handle(request: ApiRequest): ApiResponse {
+export function createHandler(
+  platform: Platform,
+  options: { allowDevActor: boolean; oidc?: OidcVerifierOptions; persistence?: string },
+) {
+  return async function handle(request: ApiRequest): Promise<ApiResponse> {
     try {
-      return route(platform, request, options.allowDevActor);
+      return await route(platform, request, options);
     } catch (error) {
       if (error instanceof UnauthorizedError) {
         return json(401, { error: error.code, message: error.message });
@@ -38,7 +43,11 @@ export function createHandler(platform: Platform, options: { allowDevActor: bool
   };
 }
 
-function route(platform: Platform, request: ApiRequest, allowDevActor: boolean): ApiResponse {
+async function route(
+  platform: Platform,
+  request: ApiRequest,
+  options: { allowDevActor: boolean; oidc?: OidcVerifierOptions; persistence?: string },
+): Promise<ApiResponse> {
   const method = request.method.toUpperCase();
   const path = normalizePath(request.path);
 
@@ -46,10 +55,15 @@ function route(platform: Platform, request: ApiRequest, allowDevActor: boolean):
     return json(200, { ok: true, service: "refund-api" });
   }
   if (method === "GET" && path === "/v1/meta") {
-    return json(200, { version: "0.3.0", providerConnectors: [], persistence: "memory" });
+    return json(200, {
+      version: "0.4.0",
+      providerConnectors: [],
+      persistence: options.persistence ?? "memory",
+      oidc: Boolean(options.oidc),
+    });
   }
 
-  const actor = resolveActor(request.headers, allowDevActor);
+  const actor = await resolveActor(request.headers, options);
   const traceId = header(request.headers, "x-trace-id") || "trace-local";
 
   if (method === "GET" && path === "/v1/me") {
@@ -278,8 +292,19 @@ function route(platform: Platform, request: ApiRequest, allowDevActor: boolean):
   return json(404, { error: "not_found" });
 }
 
-function resolveActor(headers: Record<string, string>, allowDevActor: boolean): Actor {
-  return actorFromDevHeaders(normalizeHeaders(headers), allowDevActor);
+async function resolveActor(
+  headers: Record<string, string>,
+  options: { allowDevActor: boolean; oidc?: OidcVerifierOptions },
+): Promise<Actor> {
+  const normalized = normalizeHeaders(headers);
+  const authorization = normalized.authorization ?? "";
+  if (authorization.toLowerCase().startsWith("bearer ")) {
+    if (!options.oidc) {
+      throw new UnauthorizedError("bearer tokens require OIDC configuration");
+    }
+    return actorFromAccessToken(authorization.slice(7).trim(), options.oidc);
+  }
+  return actorFromDevHeaders(normalized, options.allowDevActor);
 }
 
 function normalizeHeaders(headers: Record<string, string>): Record<string, string> {

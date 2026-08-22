@@ -9,12 +9,13 @@
 - Stage 0 foundation: `docs/iterations/2026-08-22-stage0-audit-and-ua-guide.md`.
 - API MVP + eligibility + merchant-export ingest: `docs/iterations/2026-08-22-api-mvp-eligibility-ingest.md`.
 - Console + SQL trigger proof: `docs/iterations/2026-08-22-console-and-sql-triggers.md`.
+- OIDC JWT + SQL audit/jobs: `docs/iterations/2026-08-22-oidc-sql-audit-jobs.md`.
 - File ownership: `packages/domain/**`, `packages/persist/**`, `apps/api/**`, `db/**`, `fixtures/ingest/**`, `docs/**`.
 
 ## Not done
 
-- No verified OIDC/JWKS middleware (claim mapper exists).
-- No Temporal runtime (lease helpers exist).
+- Cases/orders/sources still in-memory (audit/jobs have SQL adapters).
+- No remote JWKS fetch / Temporal runtime.
 - No Shopify connector.
 - No AliExpress Open Platform client (`aliexpress-ua` stays `draft`).
 

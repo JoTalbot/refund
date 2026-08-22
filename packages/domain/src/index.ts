@@ -6,6 +6,7 @@ export * from "./errors.js";
 export * from "./hash.js";
 export * from "./idempotency.js";
 export * from "./ingest.js";
+export * from "./jwt.js";
 export * from "./jobs.js";
 export * from "./oidc.js";
 export * from "./rbac.js";
