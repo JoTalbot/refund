@@ -1,0 +1,29 @@
+{
+  "export_id": "exp-2026-08-22-001",
+  "exported_at": "2026-08-22T09:00:00.000Z",
+  "merchant_id": "merchant-demo",
+  "consent": {
+    "granted_by": "owner@merchant.example.invalid",
+    "granted_at": "2026-08-22T08:55:00.000Z"
+  },
+  "products": [
+    {
+      "id": "SKU-MUG-1",
+      "title": "Stoneware mug 300ml",
+      "url": "https://merchant.example.invalid/products/mug-1",
+      "brand": "Example Home",
+      "sku": "SKU-MUG-1",
+      "price": { "amount": "12.50", "currency": "EUR" },
+      "availability": "in_stock"
+    },
+    {
+      "id": "SKU-TOWEL-2",
+      "title": "Linen tea towel",
+      "url": "https://merchant.example.invalid/products/towel-2",
+      "brand": "Example Home",
+      "sku": "SKU-TOWEL-2",
+      "price": { "amount": "8.00", "currency": "EUR" },
+      "availability": "out_of_stock"
+    }
+  ]
+}

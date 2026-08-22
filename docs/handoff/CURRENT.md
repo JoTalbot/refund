@@ -6,15 +6,16 @@
 
 ## Completed
 
-- Stage 0 foundation code and docs listed in `docs/iterations/2026-08-22-stage0-audit-and-ua-guide.md`.
-- File ownership for this change: `packages/domain/**`, `db/**`, `scripts/**`, `apps/api/**`, `docs/**`, `.github/**`, `infra/terraform/**`, root JS/TS config.
+- Stage 0 foundation: `docs/iterations/2026-08-22-stage0-audit-and-ua-guide.md`.
+- API MVP + eligibility + merchant-export ingest: `docs/iterations/2026-08-22-api-mvp-eligibility-ingest.md`.
+- File ownership: `packages/domain/**`, `apps/api/**`, `db/**`, `fixtures/ingest/**`, `docs/**`.
 
 ## Not done
 
-- No OIDC integration.
-- No Temporal workers.
+- No verified OIDC/JWKS middleware (claim mapper exists).
+- No Temporal runtime (lease helpers exist).
 - No Shopify connector.
-- No AliExpress Open Platform client (explicitly forbidden until source is `approved`).
+- No AliExpress Open Platform client (`aliexpress-ua` stays `draft`).
 
 ## How to resume
 

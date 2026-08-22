@@ -133,6 +133,7 @@ export interface AuditEvent {
 
 export interface SourceRecord {
   id: string;
+  tenantId?: string | null;
   slug: string;
   owner: string;
   baseUrl: string;
@@ -143,4 +144,128 @@ export interface SourceRecord {
   allowedFields: string[];
   retentionDays: number;
   regionNotes: string;
+}
+
+export const AVAILABILITIES = ["in_stock", "out_of_stock", "unknown"] as const;
+export type Availability = (typeof AVAILABILITIES)[number];
+
+export interface Money {
+  amount: string;
+  currency: string;
+}
+
+export interface NormalizedProduct {
+  id: string;
+  sourceId: string;
+  sourceProductId: string;
+  canonicalUrl: string;
+  title: string;
+  brand: string | null;
+  sku: string | null;
+  price: Money;
+  availability: Availability;
+  returnPolicySnapshotId: string | null;
+  extractorVersion: string;
+  fetchedAt: string;
+  evidenceUri: string | null;
+  fieldConfidence: Record<string, number>;
+}
+
+export interface ProductObservation {
+  id: string;
+  sourceProductId: string;
+  observedAt: string;
+  price: Money;
+  availability: Availability;
+  evidenceUri: string | null;
+}
+
+export interface PolicyRules {
+  version: string;
+  returnWindowDays: number;
+  allowedRegions: string[];
+  allowedConditions: string[];
+  excludedCategories: string[];
+  buyerPaysReturnShipping: boolean;
+  methods: string[];
+}
+
+export interface PolicySnapshot {
+  id: string;
+  sourceId: string;
+  version: string;
+  contentHash: string;
+  effectiveAt: string;
+  rules: PolicyRules;
+  evidenceUri: string | null;
+}
+
+export interface OrderLine {
+  sku: string | null;
+  title: string;
+  quantity: number;
+  amount: string;
+  currency: string;
+}
+
+export interface OrderRecord {
+  id: string;
+  tenantId: string;
+  provider: string;
+  externalId: string;
+  ownershipVerifiedAt: string | null;
+  piiRef: string | null;
+  lines: OrderLine[];
+  createdAt: string;
+}
+
+export interface EligibilityFacts {
+  region?: string;
+  condition?: string;
+  daysSinceDelivery?: number;
+  category?: string;
+  delivered?: boolean;
+}
+
+export interface EligibilityEvaluation {
+  result: EligibilityResult;
+  policySnapshotId: string;
+  policyVersion: string;
+  reasons: string[];
+  missingFields: string[];
+  recommendedMethods: string[];
+}
+
+export interface ImportRun {
+  id: string;
+  tenantId: string;
+  sourceId: string;
+  kind: "merchant_export";
+  status: "succeeded" | "failed" | "blocked";
+  extractorVersion: string;
+  idempotencyKey: string;
+  productsUpserted: number;
+  observationsAppended: number;
+  errorClass: "retryable" | "non_retryable" | "policy_blocked" | null;
+  errorMessage: string | null;
+  createdAt: string;
+}
+
+export interface JobLease {
+  runId: string;
+  jobType: string;
+  ownerId: string;
+  expiresAt: string;
+  checkpointUri: string | null;
+  payload: Record<string, unknown>;
+  version: number;
+}
+
+export interface CaseEvidence {
+  id: string;
+  caseId: string;
+  objectUri: string;
+  checksum: string;
+  classification: string;
+  expiresAt: string | null;
 }

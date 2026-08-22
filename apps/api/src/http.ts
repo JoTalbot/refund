@@ -1,0 +1,294 @@
+import {
+  UnauthorizedError,
+  actorFromDevHeaders,
+  type Actor,
+} from "@refund/domain";
+import type { Platform } from "./platform.js";
+
+export interface ApiRequest {
+  method: string;
+  path: string;
+  headers: Record<string, string>;
+  query: Record<string, string>;
+  body: unknown;
+}
+
+export interface ApiResponse {
+  status: number;
+  body: unknown;
+}
+
+const UUID = "[0-9a-fA-F-]{36}";
+
+export function createHandler(platform: Platform, options: { allowDevActor: boolean }) {
+  return function handle(request: ApiRequest): ApiResponse {
+    try {
+      return route(platform, request, options.allowDevActor);
+    } catch (error) {
+      if (error instanceof UnauthorizedError) {
+        return json(401, { error: error.code, message: error.message });
+      }
+      if (platform.isDomainError(error)) {
+        const status =
+          error.code === "not_found" ? 404 : error.code === "conflict" ? 409 : error.code === "forbidden" ? 403 : 400;
+        return json(status, { error: error.code, message: error.message });
+      }
+      return json(500, { error: "internal", message: "unexpected error" });
+    }
+  };
+}
+
+function route(platform: Platform, request: ApiRequest, allowDevActor: boolean): ApiResponse {
+  const method = request.method.toUpperCase();
+  const path = normalizePath(request.path);
+
+  if (method === "GET" && path === "/health") {
+    return json(200, { ok: true, service: "refund-api" });
+  }
+  if (method === "GET" && path === "/v1/meta") {
+    return json(200, { version: "0.2.0", providerConnectors: [] });
+  }
+
+  const actor = resolveActor(request.headers, allowDevActor);
+  const traceId = header(request.headers, "x-trace-id") || "trace-local";
+
+  if (method === "GET" && path === "/v1/sources") {
+    return json(200, { items: platform.listSources(actor) });
+  }
+
+  const sourceApprove = match(path, `^/v1/sources/([^/]+)/approve$`);
+  if (method === "POST" && sourceApprove) {
+    return json(200, platform.approveSource(actor, sourceApprove[1] ?? "", traceId));
+  }
+  const sourceReview = match(path, `^/v1/sources/([^/]+)/review$`);
+  if (method === "POST" && sourceReview) {
+    return json(200, platform.reviewSource(actor, sourceReview[1] ?? "", traceId));
+  }
+  const sourceOne = match(path, `^/v1/sources/([^/]+)$`);
+  if (method === "GET" && sourceOne) {
+    const source = platform.getSource(sourceOne[1] ?? "");
+    return json(200, { ...source, importAllowed: platform.sourceImportAllowed(source.id) });
+  }
+  if (method === "POST" && path === "/v1/sources") {
+    const body = asRecord(request.body);
+    return json(
+      201,
+      platform.createSource(
+        actor,
+        {
+          slug: String(body.slug ?? ""),
+          owner: String(body.owner ?? actor.id),
+          baseUrl: String(body.base_url ?? ""),
+          permissionBasis: String(body.permission_basis ?? ""),
+          policyUrl: String(body.policy_url ?? ""),
+          rateLimitPerMinute: Number(body.rate_limit_per_minute ?? 0),
+          allowedFields: Array.isArray(body.allowed_fields) ? body.allowed_fields.map(String) : [],
+          retentionDays: Number(body.retention_days ?? 30),
+          regionNotes: body.region_notes ? String(body.region_notes) : "",
+        },
+        traceId,
+      ),
+    );
+  }
+
+  if (method === "POST" && path === "/v1/import-runs") {
+    const body = asRecord(request.body);
+    return json(
+      200,
+      platform.importMerchantExport(
+        actor,
+        {
+          sourceId: String(body.source_id ?? ""),
+          document: body.document,
+          idempotencyKey: String(body.idempotency_key ?? header(request.headers, "idempotency-key")),
+        },
+        traceId,
+      ),
+    );
+  }
+
+  if (method === "GET" && path === "/v1/products") {
+    return json(200, {
+      items: platform.searchProducts(actor, request.query.source_id, request.query.q),
+    });
+  }
+
+  if (method === "POST" && path === "/v1/orders/import") {
+    const body = asRecord(request.body);
+    const lines = Array.isArray(body.lines) ? body.lines : [];
+    return json(
+      201,
+      platform.importOrder(
+        actor,
+        {
+          provider: String(body.provider ?? ""),
+          externalId: String(body.external_id ?? ""),
+          ownershipVerifiedAt: body.ownership_verified_at ? String(body.ownership_verified_at) : null,
+          piiRef: body.pii_ref ? String(body.pii_ref) : null,
+          lines: lines.map((line) => {
+            const row = asRecord(line);
+            return {
+              sku: row.sku ? String(row.sku) : null,
+              title: String(row.title ?? ""),
+              quantity: Number(row.quantity ?? 1),
+              amount: String(row.amount ?? "0"),
+              currency: String(row.currency ?? "EUR"),
+            };
+          }),
+          idempotencyKey: String(body.idempotency_key ?? header(request.headers, "idempotency-key")),
+        },
+        traceId,
+      ),
+    );
+  }
+
+  const orderOne = match(path, `^/v1/orders/(${UUID})$`);
+  if (method === "GET" && orderOne) {
+    return json(200, platform.getOrder(actor, orderOne[1] ?? ""));
+  }
+
+  if (method === "POST" && path === "/v1/return-cases") {
+    const body = asRecord(request.body);
+    return json(201, platform.createCase(actor, { orderId: String(body.order_id ?? "") }, traceId));
+  }
+
+  const caseElig = match(path, `^/v1/return-cases/(${UUID})/eligibility$`);
+  if (method === "POST" && caseElig) {
+    const body = asRecord(request.body);
+    return json(
+      200,
+      platform.evaluateCase(
+        actor,
+        caseElig[1] ?? "",
+        {
+          region: body.region ? String(body.region) : undefined,
+          condition: body.condition ? String(body.condition) : undefined,
+          daysSinceDelivery:
+            body.days_since_delivery === undefined ? undefined : Number(body.days_since_delivery),
+          category: body.category ? String(body.category) : undefined,
+          delivered: typeof body.delivered === "boolean" ? body.delivered : undefined,
+        },
+        traceId,
+      ),
+    );
+  }
+
+  const caseAttest = match(path, `^/v1/return-cases/(${UUID})/attestations$`);
+  if (method === "POST" && caseAttest) {
+    return json(200, platform.attest(actor, caseAttest[1] ?? "", traceId));
+  }
+
+  const caseEvidence = match(path, `^/v1/return-cases/(${UUID})/evidence$`);
+  if (method === "POST" && caseEvidence) {
+    const body = asRecord(request.body);
+    return json(
+      201,
+      platform.addEvidence(
+        actor,
+        caseEvidence[1] ?? "",
+        {
+          objectUri: String(body.object_uri ?? ""),
+          checksum: String(body.checksum ?? ""),
+          classification: String(body.classification ?? "unspecified"),
+          expiresAt: body.expires_at ? String(body.expires_at) : null,
+        },
+        traceId,
+      ),
+    );
+  }
+
+  const caseDecision = match(path, `^/v1/return-cases/(${UUID})/approval-requests/(${UUID})/decision$`);
+  if (method === "POST" && caseDecision) {
+    const body = asRecord(request.body);
+    const decision = body.decision === "rejected" ? "rejected" : "approved";
+    return json(
+      200,
+      platform.decideCaseApproval(
+        actor,
+        caseDecision[1] ?? "",
+        caseDecision[2] ?? "",
+        decision,
+        String(body.reason ?? ""),
+        traceId,
+      ),
+    );
+  }
+
+  const caseApproval = match(path, `^/v1/return-cases/(${UUID})/approval-requests$`);
+  if (method === "POST" && caseApproval) {
+    const body = asRecord(request.body);
+    return json(
+      201,
+      platform.requestCaseApproval(
+        actor,
+        caseApproval[1] ?? "",
+        String(body.reason ?? ""),
+        String(body.idempotency_key ?? header(request.headers, "idempotency-key")),
+        traceId,
+      ),
+    );
+  }
+
+  const caseSubmit = match(path, `^/v1/return-cases/(${UUID})/submit$`);
+  if (method === "POST" && caseSubmit) {
+    const body = asRecord(request.body);
+    return json(
+      200,
+      platform.submitCase(
+        actor,
+        caseSubmit[1] ?? "",
+        {
+          idempotencyKey: String(body.idempotency_key ?? header(request.headers, "idempotency-key")),
+          provider: String(body.provider ?? "manual"),
+          actionType: String(body.action_type ?? "manual_guidance_only"),
+        },
+        traceId,
+      ),
+    );
+  }
+
+  const caseOne = match(path, `^/v1/return-cases/(${UUID})$`);
+  if (method === "GET" && caseOne) {
+    return json(200, platform.getCase(actor, caseOne[1] ?? ""));
+  }
+
+  if (method === "GET" && path === "/v1/audit-events") {
+    return json(200, { items: platform.listAudit(actor, request.query.case_id) });
+  }
+
+  return json(404, { error: "not_found" });
+}
+
+function resolveActor(headers: Record<string, string>, allowDevActor: boolean): Actor {
+  return actorFromDevHeaders(normalizeHeaders(headers), allowDevActor);
+}
+
+function normalizeHeaders(headers: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(headers)) {
+    out[key.toLowerCase()] = value;
+  }
+  return out;
+}
+
+function header(headers: Record<string, string>, name: string): string {
+  return normalizeHeaders(headers)[name] ?? "";
+}
+
+function normalizePath(path: string): string {
+  if (path.length > 1 && path.endsWith("/")) return path.slice(0, -1);
+  return path || "/";
+}
+
+function match(path: string, pattern: string): RegExpMatchArray | null {
+  return path.match(new RegExp(pattern));
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function json(status: number, body: unknown): ApiResponse {
+  return { status, body };
+}

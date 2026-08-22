@@ -40,6 +40,10 @@ export function transitionSource(
   return { ...source, status: next };
 }
 
+export function createDraftSource(input: Omit<SourceRecord, "status">): SourceRecord {
+  return { ...input, status: "draft" };
+}
+
 export const ALIEXPRESS_UA_SOURCE: SourceRecord = {
   id: "11111111-1111-4111-8111-111111111111",
   slug: "aliexpress-ua",

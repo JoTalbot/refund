@@ -2,6 +2,15 @@
 
 Целевая СУБД: PostgreSQL 16+. Миграции применяются в транзакции. План восстановления не удаляет WORM-копию аудита вне БД.
 
+## 0003_jobs_and_import_runs.sql
+
+```sql
+BEGIN;
+DROP TABLE IF EXISTS job_leases;
+DROP TABLE IF EXISTS import_runs;
+COMMIT;
+```
+
 ## 0002_audit_append_only.sql
 
 ```sql

@@ -46,6 +46,13 @@ npm run ci
 
 Гайд покупателя AliExpress (UA, только ручной сценарий): [`docs/providers/ALIEXPRESS_UA_BUYER_GUIDE_RU.md`](docs/providers/ALIEXPRESS_UA_BUYER_GUIDE_RU.md). Источник `aliexpress-ua` остаётся `draft`.
 
+Локальный API (заголовки актора только вне `production`):
+
+```bash
+npm run dev:api
+curl -s http://127.0.0.1:3000/health
+```
+
 ## Статус
 
-Этап 0 — foundation: доменный контракт аудита и approval boundary, CI, threat model, Terraform skeleton, реестр источников. Коннекторов нет. До разработки коннектора владелец магазина должен быть в allowlist и пройти юридико-техническую проверку.
+Этапы 0–2 в процессе: foundation + in-memory API MVP + eligibility + импорт JSON-экспорта продавца. Коннекторов маркетплейсов нет. `aliexpress-ua` остаётся `draft`. До разработки коннектора владелец магазина должен быть в allowlist и пройти юридико-техническую проверку.

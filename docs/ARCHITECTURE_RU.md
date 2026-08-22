@@ -149,9 +149,11 @@ Allowlist источников. Для каждого источника фик�
 
 ### Этап 1 — законный каталог
 - Один официально разрешённый API/фид, нормализатор, fixtures, source registry, продукты/наблюдения, dashboard ingestion runs.
+- Статус 2026-08-22: парсер `merchant-export@1.0.0` и `POST /v1/import-runs` для экспорта продавца. Marketplace HTTP-коннекторов нет.
 
 ### Этап 2 — кейсы без внешней отправки
 - Заказы, policy snapshots, eligibility, evidence store, case state machine, RBAC, audit.
+- Статус 2026-08-22: in-memory API покрывает §7; внешняя отправка только `manual_guidance_only` после approval.
 
 ### Этап 3 — одобренная интеграция возврата
 - Один провайдер (например, собственный Shopify-магазин с правами merchant), approval gate, idempotency, webhook reconciliation и sandbox tests.

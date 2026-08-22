@@ -29,6 +29,20 @@ export class ValidationError extends DomainError {
   }
 }
 
+export class NotFoundError extends DomainError {
+  constructor(message: string) {
+    super("not_found", message);
+    this.name = "NotFoundError";
+  }
+}
+
+export class UnauthorizedError extends DomainError {
+  constructor(message = "authentication required") {
+    super("unauthorized", message);
+    this.name = "UnauthorizedError";
+  }
+}
+
 export class AuditImmutabilityError extends DomainError {
   constructor(message = "audit_events is append-only") {
     super("audit_immutable", message);
