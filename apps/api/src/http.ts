@@ -46,11 +46,15 @@ function route(platform: Platform, request: ApiRequest, allowDevActor: boolean):
     return json(200, { ok: true, service: "refund-api" });
   }
   if (method === "GET" && path === "/v1/meta") {
-    return json(200, { version: "0.2.0", providerConnectors: [] });
+    return json(200, { version: "0.3.0", providerConnectors: [], persistence: "memory" });
   }
 
   const actor = resolveActor(request.headers, allowDevActor);
   const traceId = header(request.headers, "x-trace-id") || "trace-local";
+
+  if (method === "GET" && path === "/v1/me") {
+    return json(200, actor);
+  }
 
   if (method === "GET" && path === "/v1/sources") {
     return json(200, { items: platform.listSources(actor) });
@@ -113,6 +117,10 @@ function route(platform: Platform, request: ApiRequest, allowDevActor: boolean):
     });
   }
 
+  if (method === "GET" && path === "/v1/orders") {
+    return json(200, { items: platform.listOrders(actor) });
+  }
+
   if (method === "POST" && path === "/v1/orders/import") {
     const body = asRecord(request.body);
     const lines = Array.isArray(body.lines) ? body.lines : [];
@@ -145,6 +153,14 @@ function route(platform: Platform, request: ApiRequest, allowDevActor: boolean):
   const orderOne = match(path, `^/v1/orders/(${UUID})$`);
   if (method === "GET" && orderOne) {
     return json(200, platform.getOrder(actor, orderOne[1] ?? ""));
+  }
+
+  if (method === "GET" && path === "/v1/import-runs") {
+    return json(200, { items: platform.listImports(actor) });
+  }
+
+  if (method === "GET" && path === "/v1/return-cases") {
+    return json(200, { items: platform.listCases(actor) });
   }
 
   if (method === "POST" && path === "/v1/return-cases") {
@@ -215,6 +231,9 @@ function route(platform: Platform, request: ApiRequest, allowDevActor: boolean):
   }
 
   const caseApproval = match(path, `^/v1/return-cases/(${UUID})/approval-requests$`);
+  if (method === "GET" && caseApproval) {
+    return json(200, { items: platform.listApprovals(actor, caseApproval[1] ?? "") });
+  }
   if (method === "POST" && caseApproval) {
     const body = asRecord(request.body);
     return json(

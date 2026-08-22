@@ -23,6 +23,7 @@
     "dev:api": "npm run start -w @refund/api"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.4",
     "@eslint/js": "^9.33.0",
     "@types/node": "^22.17.2",
     "eslint": "^9.33.0",

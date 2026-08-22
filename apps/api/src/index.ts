@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { createHandler } from "./http.js";
 import { Platform } from "./platform.js";
+import { readPublicFile } from "./static.js";
 
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? "0.0.0.0";
@@ -34,25 +35,40 @@ export function readRequest(request: IncomingMessage, bodyText: string) {
   };
 }
 
+function applyCors(response: ServerResponse): void {
+  response.setHeader("x-content-type-options", "nosniff");
+  response.setHeader("access-control-allow-origin", "*");
+  response.setHeader(
+    "access-control-allow-headers",
+    "content-type, x-actor-id, x-actor-role, x-tenant-id, x-step-up, x-trace-id, idempotency-key",
+  );
+  response.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
+}
+
 const server = createServer((request: IncomingMessage, response: ServerResponse) => {
   const chunks: Buffer[] = [];
   request.on("data", (chunk: Buffer) => {
     chunks.push(chunk);
   });
   request.on("end", () => {
-    response.setHeader("content-type", "application/json; charset=utf-8");
-    response.setHeader("x-content-type-options", "nosniff");
-    response.setHeader("access-control-allow-origin", "*");
-    response.setHeader(
-      "access-control-allow-headers",
-      "content-type, x-actor-id, x-actor-role, x-tenant-id, x-step-up, x-trace-id, idempotency-key",
-    );
-    response.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
+    applyCors(response);
     if (request.method === "OPTIONS") {
       response.writeHead(204);
       response.end();
       return;
     }
+    const hostHeader = request.headers.host ?? "localhost";
+    const url = new URL(request.url ?? "/", `http://${hostHeader}`);
+    if (request.method === "GET") {
+      const file = readPublicFile(url.pathname);
+      if (file) {
+        response.setHeader("content-type", file.type);
+        response.writeHead(200);
+        response.end(file.body);
+        return;
+      }
+    }
+    response.setHeader("content-type", "application/json; charset=utf-8");
     try {
       const parsed = readRequest(request, Buffer.concat(chunks).toString("utf8"));
       const result = handle(parsed);

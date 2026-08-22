@@ -8,7 +8,8 @@
 
 - Stage 0 foundation: `docs/iterations/2026-08-22-stage0-audit-and-ua-guide.md`.
 - API MVP + eligibility + merchant-export ingest: `docs/iterations/2026-08-22-api-mvp-eligibility-ingest.md`.
-- File ownership: `packages/domain/**`, `apps/api/**`, `db/**`, `fixtures/ingest/**`, `docs/**`.
+- Console + SQL trigger proof: `docs/iterations/2026-08-22-console-and-sql-triggers.md`.
+- File ownership: `packages/domain/**`, `packages/persist/**`, `apps/api/**`, `db/**`, `fixtures/ingest/**`, `docs/**`.
 
 ## Not done
 

@@ -514,6 +514,26 @@ export class Platform {
       });
   }
 
+  listOrders(actor: Actor): OrderRecord[] {
+    assertPermission(actor, "orders:read");
+    return [...this.orders.values()].filter((order) => order.tenantId === actor.tenantId);
+  }
+
+  listCases(actor: Actor): ReturnCase[] {
+    assertPermission(actor, "cases:read");
+    return [...this.cases.values()].filter((item) => item.tenantId === actor.tenantId);
+  }
+
+  listApprovals(actor: Actor, caseId: string): ApprovalRequest[] {
+    this.getCase(actor, caseId);
+    return [...this.approvals.values()].filter((item) => item.caseId === caseId);
+  }
+
+  listImports(actor: Actor): ImportRun[] {
+    assertPermission(actor, "import:start");
+    return [...this.imports.values()].filter((item) => item.tenantId === actor.tenantId);
+  }
+
   sourceImportAllowed(idOrSlug: string): boolean {
     return canStartImport(this.getSource(idOrSlug));
   }

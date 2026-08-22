@@ -46,12 +46,15 @@ npm run ci
 
 Гайд покупателя AliExpress (UA, только ручной сценарий): [`docs/providers/ALIEXPRESS_UA_BUYER_GUIDE_RU.md`](docs/providers/ALIEXPRESS_UA_BUYER_GUIDE_RU.md). Источник `aliexpress-ua` остаётся `draft`.
 
-Локальный API (заголовки актора только вне `production`):
+Локальный API и консоль (заголовки актора только вне `production`):
 
 ```bash
 npm run dev:api
+# консоль: http://127.0.0.1:3000/
 curl -s http://127.0.0.1:3000/health
 ```
+
+Миграции проверяются в CI через PGlite. Живой Postgres 16: `docker compose up -d`, затем `npx tsx scripts/apply-migrations.ts | psql postgres://refund@localhost:5432/refund`.
 
 ## Статус
 

@@ -142,5 +142,9 @@ describe("API MVP", () => {
     expect(handle({ method: "GET", path: "/health", headers: {}, query: {}, body: null }).body).toMatchObject({
       ok: true,
     });
+    expect(
+      customer("GET", "/v1/me").body,
+    ).toMatchObject({ role: "customer", tenantId: TENANT });
+    expect((customer("GET", "/v1/return-cases").body as { items: unknown[] }).items.length).toBeGreaterThan(0);
   });
 });
