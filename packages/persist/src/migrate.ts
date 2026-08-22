@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export interface SqlExec {
   exec(sql: string): Promise<unknown>;
@@ -34,5 +35,5 @@ export async function applyMigrations(
 }
 
 export function defaultMigrationsDir(): string {
-  return join(process.cwd(), "db/migrations");
+  return fileURLToPath(new URL("../../../db/migrations", import.meta.url));
 }
