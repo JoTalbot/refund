@@ -15,7 +15,7 @@
     "ci": "npm run lint && npm run typecheck && npm run test && npm run secret-scan && npm run validate-links && npm run check-sql && npm run check-no-connector",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
+    "test": "NODE_OPTIONS=--max-old-space-size=8192 vitest run --maxWorkers=1",
     "secret-scan": "tsx scripts/secret-scan.ts",
     "validate-links": "tsx scripts/validate-links.ts",
     "check-sql": "tsx scripts/check-sql.ts",

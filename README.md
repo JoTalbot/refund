@@ -54,7 +54,7 @@ npm run dev:api
 curl -s http://127.0.0.1:3000/health
 ```
 
-Старт поднимает PGlite, накатывает миграции и гидратирует снимок. OIDC: `OIDC_ISSUER_URL`, `OIDC_AUDIENCE`, `OIDC_JWKS_URL`.
+Старт поднимает PGlite, накатывает миграции и гидратирует снимок. OIDC: `OIDC_ISSUER_URL`, `OIDC_AUDIENCE`, `OIDC_JWKS_URL`. DSN Postgres — только через `DATABASE_URL_SECRET_ID` (значение инжектит secret manager). Worker: `npm run start -w @refund/worker`.
 
 Миграции проверяются в CI через PGlite. Живой Postgres 16: `docker compose up -d`, затем `npx tsx scripts/apply-migrations.ts | psql postgres://refund@localhost:5432/refund`.
 
