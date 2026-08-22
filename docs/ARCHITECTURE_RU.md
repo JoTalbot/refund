@@ -153,13 +153,15 @@ Allowlist источников. Для каждого источника фик�
 
 ### Этап 2 — кейсы без внешней отправки
 - Заказы, policy snapshots, eligibility, evidence store, case state machine, RBAC, audit.
-- Статус 2026-08-22: API покрывает §7; снимок кейсов/заказов в SQL; boot на PGlite; внешняя отправка только `manual_guidance_only` после approval.
+- Статус 2026-08-22: API покрывает §7; снимок кейсов/заказов в SQL; boot на PGlite; внешняя отправка только `manual_guidance_only` после approval. После submit оператор двигает `merchant_review`…`resolved` по проверяемому ответу продавца.
 
 ### Этап 3 — одобренная интеграция возврата
 - Один провайдер (например, собственный Shopify-магазин с правами merchant), approval gate, idempotency, webhook reconciliation и sandbox tests.
+- Статус 2026-08-22: порт сверки `POST /v1/provider-actions/{id}/reconcile` есть; HTTP-клиента Shopify/AliExpress нет.
 
 ### Этап 4 — hardening
 - Backups/restore drill, chaos test потери worker, SLO, retention jobs, DLP, pen-test, review legal/ToS по каждому источнику.
+- Статус 2026-08-22: transactional outbox, legal hold, erasure PII, structured logs, rate limit источника, object-store port. Живой Temporal/S3/OIDC — на стороне деплоя.
 
 ## 9. Критерии приёмки MVP
 

@@ -138,6 +138,18 @@
           <button type="button" id="submit-ok">Submit manual_guidance_only</button>
         </div>
       </section>
+      <section>
+        <h2>4. После submit: сверка, outbox, erasure</h2>
+        <p class="note">Денежный успех не выводится из UI. Сверку пишет оператор по письму/тикету продавца. Erasure — только compliance, и не при legal hold.</p>
+        <div class="actions">
+          <button type="button" id="advance">Merchant review</button>
+          <button type="button" id="reconcile">Reconcile action</button>
+          <button type="button" id="outbox">GET /v1/outbox</button>
+          <button type="button" id="publish">Publish outbox</button>
+          <button type="button" id="hold">Legal hold</button>
+          <button type="button" id="erase">Erasure PII</button>
+        </div>
+      </section>
     </div>
     <div id="shopify" hidden>
       <section>
@@ -176,7 +188,7 @@
   <script>
     const TENANT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
     const ROLES = ["merchant_admin", "compliance_admin", "customer", "approver", "operator"];
-    const state = { role: "merchant_admin", sourceId: "", caseId: "", approvalId: "", orderId: "" };
+    const state = { role: "merchant_admin", sourceId: "", caseId: "", approvalId: "", orderId: "", actionId: "", evidenceId: "", caseVersion: 1 };
     const fixture = {
       export_id: "exp-console-1",
       exported_at: "2026-08-22T09:00:00.000Z",
@@ -259,11 +271,13 @@
         row.innerHTML = "<td>" + item.id.slice(0, 8) + "</td><td>" + item.state + "</td><td>" + item.eligibility + "</td>";
         caseBody.appendChild(row);
         state.caseId = item.id;
+        state.caseVersion = item.version;
       });
       setRole(previous);
     }
 
     document.getElementById("refresh").onclick = refresh;
+    document.getElementById("ready").onclick = () => api("GET", "/ready");
     document.getElementById("create-source").onclick = async () => {
       setRole("merchant_admin");
       const created = await api("POST", "/v1/sources", {
@@ -363,13 +377,68 @@
         action_type: "create_return"
       });
     };
-    document.getElementById("submit-ok").onclick = () => {
+    document.getElementById("submit-ok").onclick = async () => {
       setRole("approver");
-      return api("POST", "/v1/return-cases/" + state.caseId + "/submit", {
+      const submitted = await api("POST", "/v1/return-cases/" + state.caseId + "/submit", {
         idempotency_key: "sub-ok-" + Date.now(),
         provider: "manual",
         action_type: "manual_guidance_only"
       });
+      state.actionId = submitted.action && submitted.action.id;
+      state.caseVersion = submitted.case && submitted.case.version;
+    };
+    document.getElementById("advance").onclick = async () => {
+      setRole("operator");
+      const next = await api("POST", "/v1/return-cases/" + state.caseId + "/transition", {
+        next_state: "merchant_review",
+        expected_version: state.caseVersion
+      });
+      state.caseVersion = next.version || state.caseVersion;
+    };
+    document.getElementById("reconcile").onclick = () => {
+      setRole("operator");
+      return api("POST", "/v1/provider-actions/" + state.actionId + "/reconcile", {
+        status: "submitted",
+        correlation_id: "manual-desk-" + Date.now(),
+        note: "Письмо продавца с номером тикета"
+      });
+    };
+    document.getElementById("outbox").onclick = () => {
+      setRole("operator");
+      return api("GET", "/v1/outbox");
+    };
+    document.getElementById("publish").onclick = () => {
+      setRole("service_agent");
+      return api("POST", "/v1/outbox/publish", { limit: 20 });
+    };
+    document.getElementById("hold").onclick = () => {
+      setRole("operator");
+      return api("POST", "/v1/return-cases/" + state.caseId + "/evidence/" + state.evidenceId + "/legal-hold", {
+        legal_hold: true
+      });
+    };
+    document.getElementById("erase").onclick = () => {
+      setRole("compliance_admin");
+      return api("POST", "/v1/return-cases/" + state.caseId + "/erasure", {
+        reason: "Запрос субъекта на удаление PII"
+      });
+    };
+    document.getElementById("run-all").onclick = async () => {
+      setRole("merchant_admin");
+      await document.getElementById("create-source").onclick();
+      await document.getElementById("review-source").onclick();
+      await document.getElementById("approve-source").onclick();
+      await document.getElementById("import-ok").onclick();
+      await document.getElementById("import-order").onclick();
+      await document.getElementById("open-case").onclick();
+      await document.getElementById("elig").onclick();
+      await document.getElementById("evidence").onclick();
+      await document.getElementById("attest").onclick();
+      await document.getElementById("ask").onclick();
+      await document.getElementById("decide").onclick();
+      await document.getElementById("submit-ok").onclick();
+      await document.getElementById("advance").onclick();
+      await document.getElementById("outbox").onclick();
     };
   </script>
 </body>

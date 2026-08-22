@@ -6,6 +6,7 @@ import type {
   ImportRun,
   NormalizedProduct,
   OrderRecord,
+  OutboxEvent,
   PolicySnapshot,
   ProductObservation,
   ProviderAction,
@@ -26,6 +27,7 @@ export interface PlatformSnapshot {
   evidence: CaseEvidence[];
   imports: ImportRun[];
   audit: AuditEvent[];
+  outbox: OutboxEvent[];
 }
 
 export function emptySnapshot(): PlatformSnapshot {
@@ -42,5 +44,6 @@ export function emptySnapshot(): PlatformSnapshot {
     evidence: [],
     imports: [],
     audit: [],
+    outbox: [],
   };
 }

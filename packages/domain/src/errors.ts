@@ -49,3 +49,10 @@ export class AuditImmutabilityError extends DomainError {
     this.name = "AuditImmutabilityError";
   }
 }
+
+export class RateLimitError extends DomainError {
+  constructor(message = "rate limit exceeded") {
+    super("rate_limited", message);
+    this.name = "RateLimitError";
+  }
+}

@@ -33,5 +33,8 @@ describe("source registry", () => {
     const approved = transitionSource(actor("compliance_admin"), reviewed, "approved");
     expect(approved.status).toBe("approved");
     expect(canStartImport(approved)).toBe(true);
+    expect(() => transitionSource(actor("operator"), approved, "suspended")).toThrow(ForbiddenError);
+    expect(transitionSource(actor("compliance_admin"), approved, "suspended").status).toBe("suspended");
   });
 });
+

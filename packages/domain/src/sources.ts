@@ -26,11 +26,15 @@ export function transitionSource(
   source: SourceRecord,
   next: SourceStatus,
 ): SourceRecord {
-  assertSameTenant(actor, actor.tenantId);
+  if (source.tenantId) {
+    assertSameTenant(actor, source.tenantId);
+  }
   if (next === "approved") {
     assertPermission(actor, "sources:approve");
   } else if (next === "review") {
     assertPermission(actor, "sources:review");
+  } else if (next === "suspended") {
+    assertPermission(actor, "sources:suspend");
   } else {
     assertPermission(actor, "sources:create");
   }

@@ -2,9 +2,13 @@ import {
   UnauthorizedError,
   actorFromAccessToken,
   actorFromDevHeaders,
+  createLogEvent,
   hasPermission,
   type Actor,
+  type CaseState,
+  type LogSink,
   type OidcVerifierOptions,
+  type ProviderActionStatus,
 } from "@refund/domain";
 import type { SqlJobStore, SqlPlatformStore } from "@refund/persist";
 import type { Platform } from "./platform.js";
@@ -33,14 +37,24 @@ export function createHandler(
     persistence?: string;
     store?: SqlPlatformStore;
     jobs?: SqlJobStore;
+    logger?: LogSink;
   },
 ) {
   return async function handle(request: ApiRequest): Promise<ApiResponse> {
+    const traceId = header(request.headers, "x-trace-id") || "trace-local";
     try {
       const result = await route(platform, request, options);
       if (options.store && request.method.toUpperCase() === "POST" && result.status < 400) {
         await options.store.saveSnapshot(platform.exportSnapshot());
       }
+      options.logger?.write(
+        createLogEvent({
+          message: `${request.method.toUpperCase()} ${normalizePath(request.path)}`,
+          traceId,
+          action: "http.request",
+          status: result.status,
+        }),
+      );
       return result;
     } catch (error) {
       if (error instanceof UnauthorizedError) {
@@ -48,7 +62,24 @@ export function createHandler(
       }
       if (platform.isDomainError(error)) {
         const status =
-          error.code === "not_found" ? 404 : error.code === "conflict" ? 409 : error.code === "forbidden" ? 403 : 400;
+          error.code === "not_found"
+            ? 404
+            : error.code === "conflict"
+              ? 409
+              : error.code === "forbidden"
+                ? 403
+                : error.code === "rate_limited"
+                  ? 429
+                  : 400;
+        options.logger?.write(
+          createLogEvent({
+            level: "warn",
+            message: `${request.method.toUpperCase()} ${normalizePath(request.path)}`,
+            traceId,
+            action: "http.error",
+            status,
+          }),
+        );
         return json(status, { error: error.code, message: error.message });
       }
       return json(500, { error: "internal", message: "unexpected error" });
@@ -87,7 +118,7 @@ async function route(
   }
   if (method === "GET" && path === "/v1/meta") {
     return json(200, {
-      version: "0.5.0",
+      version: "0.6.0",
       providerConnectors: [],
       persistence: options.persistence ?? "memory",
       oidc: Boolean(options.oidc),
@@ -134,6 +165,10 @@ async function route(
   const sourceApprove = match(path, `^/v1/sources/([^/]+)/approve$`);
   if (method === "POST" && sourceApprove) {
     return json(200, platform.approveSource(actor, sourceApprove[1] ?? "", traceId));
+  }
+  const sourceSuspend = match(path, `^/v1/sources/([^/]+)/suspend$`);
+  if (method === "POST" && sourceSuspend) {
+    return json(200, platform.suspendSource(actor, sourceSuspend[1] ?? "", traceId));
   }
   const sourceReview = match(path, `^/v1/sources/([^/]+)/review$`);
   if (method === "POST" && sourceReview) {
@@ -265,7 +300,51 @@ async function route(
     return json(200, platform.attest(actor, caseAttest[1] ?? "", traceId));
   }
 
+  const caseTransition = match(path, `^/v1/return-cases/(${UUID})/transition$`);
+  if (method === "POST" && caseTransition) {
+    const body = asRecord(request.body);
+    return json(
+      200,
+      platform.advanceCase(
+        actor,
+        caseTransition[1] ?? "",
+        String(body.next_state ?? "") as CaseState,
+        Number(body.expected_version ?? 0),
+        traceId,
+      ),
+    );
+  }
+
+  const caseErasure = match(path, `^/v1/return-cases/(${UUID})/erasure$`);
+  if (method === "POST" && caseErasure) {
+    const body = asRecord(request.body);
+    return json(200, platform.eraseCasePii(actor, caseErasure[1] ?? "", String(body.reason ?? ""), traceId));
+  }
+
+  const caseHold = match(path, `^/v1/return-cases/(${UUID})/evidence/(${UUID})/legal-hold$`);
+  if (method === "POST" && caseHold) {
+    const body = asRecord(request.body);
+    return json(
+      200,
+      platform.setEvidenceHold(
+        actor,
+        caseHold[1] ?? "",
+        caseHold[2] ?? "",
+        body.legal_hold !== false,
+        traceId,
+      ),
+    );
+  }
+
+  const caseActions = match(path, `^/v1/return-cases/(${UUID})/actions$`);
+  if (method === "GET" && caseActions) {
+    return json(200, { items: platform.listActions(actor, caseActions[1] ?? "") });
+  }
+
   const caseEvidence = match(path, `^/v1/return-cases/(${UUID})/evidence$`);
+  if (method === "GET" && caseEvidence) {
+    return json(200, { items: platform.listEvidence(actor, caseEvidence[1] ?? "") });
+  }
   if (method === "POST" && caseEvidence) {
     const body = asRecord(request.body);
     return json(
@@ -344,6 +423,32 @@ async function route(
 
   if (method === "GET" && path === "/v1/audit-events") {
     return json(200, { items: platform.listAudit(actor, request.query.case_id) });
+  }
+
+  if (method === "GET" && path === "/v1/outbox") {
+    return json(200, { items: platform.listOutbox(actor) });
+  }
+  if (method === "POST" && path === "/v1/outbox/publish") {
+    const body = asRecord(request.body);
+    return json(200, platform.publishOutbox(actor, Number(body.limit ?? 20)));
+  }
+
+  const actionReconcile = match(path, `^/v1/provider-actions/(${UUID})/reconcile$`);
+  if (method === "POST" && actionReconcile) {
+    const body = asRecord(request.body);
+    return json(
+      200,
+      platform.reconcileAction(
+        actor,
+        actionReconcile[1] ?? "",
+        {
+          status: String(body.status ?? "") as ProviderActionStatus,
+          correlationId: String(body.correlation_id ?? ""),
+          note: String(body.note ?? ""),
+        },
+        traceId,
+      ),
+    );
   }
 
   return json(404, { error: "not_found" });

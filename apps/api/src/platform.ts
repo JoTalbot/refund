@@ -7,7 +7,10 @@ import {
   IdempotencyStore,
   InMemoryAuditAppender,
   MemoryAuditStore,
+  MemoryOutbox,
   NotFoundError,
+  RateLimitError,
+  SlidingWindowLimiter,
   ValidationError,
   applyEligibility,
   assertImportAllowed,
@@ -18,29 +21,40 @@ import {
   classifyImportFailure,
   createDraftCase,
   createDraftSource,
+  createEvidenceRecord,
+  createOutboxEvent,
   createPolicySnapshot,
   createProviderAction,
   decideApproval,
+  eraseCaseArtifacts,
   evaluateEligibility,
+  markOutboxFailed,
+  markOutboxPublished,
   mergeProducts,
   parseMerchantExport,
+  placeLegalHold,
+  reconcileProviderAction,
   requestApproval,
   transitionCase,
   transitionSource,
   type Actor,
   type ApprovalRequest,
   type CaseEvidence,
+  type CaseState,
   type EligibilityFacts,
   type ImportRun,
   type NormalizedProduct,
   type OrderLine,
   type OrderRecord,
+  type OutboxEvent,
   type PolicySnapshot,
   type ProductObservation,
   type ProviderAction,
+  type ProviderActionStatus,
   type ReturnCase,
   type SourceRecord,
 } from "@refund/domain";
+import type { ObjectStore } from "@refund/persist";
 
 export class Platform {
   readonly auditStore = new MemoryAuditStore();
@@ -59,6 +73,13 @@ export class Platform {
   private readonly orderKeys = new IdempotencyStore<OrderRecord>();
   private readonly submitKeys = new IdempotencyStore<ProviderAction>();
   private readonly seenActors = new Map<string, Actor>();
+  private readonly outbox = new MemoryOutbox();
+  private readonly limiter = new SlidingWindowLimiter();
+  private objectStore: ObjectStore | null = null;
+
+  bindObjectStore(store: ObjectStore): void {
+    this.objectStore = store;
+  }
 
   constructor() {
     this.sources.set(ALIEXPRESS_UA_SOURCE.id, { ...ALIEXPRESS_UA_SOURCE });
@@ -87,6 +108,7 @@ export class Platform {
       evidence: [...this.evidence],
       imports: [...this.imports.values()],
       audit: [...this.auditStore.events],
+      outbox: this.outbox.list(),
     };
   }
 
@@ -102,6 +124,7 @@ export class Platform {
     this.evidence.splice(0, this.evidence.length);
     this.imports.clear();
     this.seenActors.clear();
+    this.outbox.clear();
     this.auditStore.events.splice(0, this.auditStore.events.length);
 
     for (const source of snapshot.sources) this.putSource(source);
@@ -126,7 +149,14 @@ export class Platform {
       this.actions.set(item.id, item);
       this.submitKeys.remember(item.tenantId, item.idempotencyKey, item);
     }
-    this.evidence.push(...snapshot.evidence);
+    this.evidence.push(
+      ...snapshot.evidence.map((item) => ({
+        ...item,
+        legalHold: Boolean(item.legalHold),
+        erasedAt: item.erasedAt ?? null,
+      })),
+    );
+    this.outbox.load(snapshot.outbox ?? []);
     for (const item of snapshot.imports) {
       this.imports.set(item.id, item);
       this.importKeys.remember(item.tenantId, item.idempotencyKey, item);
@@ -137,6 +167,32 @@ export class Platform {
     this.auditStore.events.push(...snapshot.audit);
   }
 
+  private rememberActor(actor: Actor): void {
+    this.seenActors.set(`${actor.tenantId}:${actor.id}`, actor);
+  }
+
+  private enqueueOutbox(
+    actor: Actor,
+    input: {
+      aggregateType: string;
+      aggregateId: string;
+      eventType: string;
+      payload: Record<string, unknown>;
+      idempotencyKey: string;
+    },
+  ): OutboxEvent {
+    return this.outbox.enqueue(
+      createOutboxEvent({
+        tenantId: actor.tenantId,
+        aggregateType: input.aggregateType,
+        aggregateId: input.aggregateId,
+        eventType: input.eventType,
+        payload: input.payload,
+        idempotencyKey: input.idempotencyKey,
+      }),
+    );
+  }
+
   private record(
     actor: Actor,
     action: string,
@@ -145,6 +201,7 @@ export class Platform {
     after: unknown,
     extra: { caseId?: string; policyVersion?: string; traceId: string },
   ): void {
+    this.rememberActor(actor);
     this.audit.append({
       tenantId: actor.tenantId,
       actorId: actor.id,
@@ -238,6 +295,7 @@ export class Platform {
     const existing = this.importKeys.get(actor.tenantId, input.idempotencyKey);
     if (existing) return existing;
     const source = this.getSource(input.sourceId);
+    this.limiter.acquireOrThrow(source.id, source.rateLimitPerMinute, Date.now(), source.slug);
     const now = new Date().toISOString();
     try {
       assertImportAllowed(source);
@@ -283,6 +341,7 @@ export class Platform {
       };
       return this.saveImport(actor, run, { traceId, after: { status: run.status, upserts } });
     } catch (error) {
+      if (error instanceof RateLimitError) throw error;
       const classified = classifyImportFailure(source, error);
       const run: ImportRun = {
         id: randomUUID(),
@@ -348,6 +407,7 @@ export class Platform {
       piiRef: input.piiRef ?? null,
       lines: input.lines,
       createdAt: new Date().toISOString(),
+      erasedAt: null,
     };
     this.orders.set(order.id, order);
     this.orderKeys.remember(actor.tenantId, input.idempotencyKey, order);
@@ -446,20 +506,14 @@ export class Platform {
   ): CaseEvidence {
     const current = this.getCase(actor, id);
     assertPermission(actor, "cases:update");
-    if (!input.objectUri.startsWith("s3://") && !input.objectUri.startsWith("https://")) {
-      throw new ValidationError("evidence must be an object-storage or https URI");
-    }
-    if (!/^[a-f0-9]{64}$/i.test(input.checksum)) {
-      throw new ValidationError("checksum must be sha-256 hex");
-    }
-    const item: CaseEvidence = {
+    const item = createEvidenceRecord({
       id: randomUUID(),
       caseId: current.id,
       objectUri: input.objectUri,
-      checksum: input.checksum.toLowerCase(),
+      checksum: input.checksum,
       classification: input.classification,
       expiresAt: input.expiresAt ?? null,
-    };
+    });
     this.evidence.push(item);
     this.record(actor, "case.evidence_added", "case_evidence", item.id, { classification: item.classification }, { traceId, caseId: current.id });
     return item;
@@ -557,6 +611,18 @@ export class Platform {
     this.cases.set(submitted.id, submitted);
     this.actions.set(action.id, action);
     this.submitKeys.remember(actor.tenantId, input.idempotencyKey, action);
+    this.enqueueOutbox(actor, {
+      aggregateType: "provider_action",
+      aggregateId: action.id,
+      eventType: "case.submitted",
+      payload: {
+        caseId: submitted.id,
+        actionType: action.actionType,
+        provider: action.provider,
+        status: action.status,
+      },
+      idempotencyKey: `outbox-submit-${input.idempotencyKey}`.slice(0, 128),
+    });
     this.record(
       actor,
       "provider_action.queued",
@@ -566,6 +632,176 @@ export class Platform {
       { traceId, caseId: submitted.id },
     );
     return { case: submitted, action };
+  }
+
+  advanceCase(actor: Actor, id: string, nextState: CaseState, expectedVersion: number, traceId: string): ReturnCase {
+    const current = this.getCase(actor, id);
+    const next = transitionCase(actor, current, nextState, expectedVersion);
+    this.cases.set(next.id, next);
+    this.enqueueOutbox(actor, {
+      aggregateType: "return_case",
+      aggregateId: next.id,
+      eventType: "case.transitioned",
+      payload: { from: current.state, to: next.state, version: next.version },
+      idempotencyKey: `outbox-case-${next.id}-${next.version}`.replace(/[^A-Za-z0-9:_-]/g, "").padEnd(16, "x"),
+    });
+    this.record(
+      actor,
+      "case.transitioned",
+      "return_case",
+      next.id,
+      { state: next.state, version: next.version },
+      { traceId, caseId: next.id },
+    );
+    return next;
+  }
+
+  listEvidence(actor: Actor, caseId: string): CaseEvidence[] {
+    this.getCase(actor, caseId);
+    return this.evidence.filter((item) => item.caseId === caseId);
+  }
+
+  listActions(actor: Actor, caseId: string): ProviderAction[] {
+    this.getCase(actor, caseId);
+    return [...this.actions.values()].filter((item) => item.caseId === caseId);
+  }
+
+  setEvidenceHold(actor: Actor, caseId: string, evidenceId: string, legalHold: boolean, traceId: string): CaseEvidence {
+    this.getCase(actor, caseId);
+    if (actor.role === "customer") {
+      throw new ValidationError("customer cannot place a legal hold");
+    }
+    if (actor.role !== "compliance_admin") {
+      assertPermission(actor, "cases:update");
+    }
+    const index = this.evidence.findIndex((item) => item.id === evidenceId && item.caseId === caseId);
+    if (index < 0) throw new NotFoundError("evidence not found");
+    const next = placeLegalHold(this.evidence[index] as CaseEvidence, legalHold);
+    this.evidence[index] = next;
+    this.record(
+      actor,
+      "case.evidence_hold",
+      "case_evidence",
+      next.id,
+      { legalHold: next.legalHold },
+      { traceId, caseId },
+    );
+    return next;
+  }
+
+  eraseCasePii(actor: Actor, caseId: string, reason: string, traceId: string): {
+    order: OrderRecord;
+    evidence: CaseEvidence[];
+    redactedFields: string[];
+  } {
+    const current = this.getCase(actor, caseId);
+    const order = this.getOrder(actor, current.orderId);
+    const related = this.evidence.filter((item) => item.caseId === current.id);
+    const result = eraseCaseArtifacts({
+      actor,
+      tenantId: current.tenantId,
+      order,
+      evidence: related,
+      reason,
+      erasedAt: new Date().toISOString(),
+    });
+    this.orders.set(result.order.id, result.order);
+    for (const item of result.evidence) {
+      const index = this.evidence.findIndex((row) => row.id === item.id);
+      if (index >= 0) this.evidence[index] = item;
+      if (this.objectStore && item.objectUri === "erased://redacted") {
+        const previous = related.find((row) => row.id === item.id);
+        if (previous && previous.objectUri !== item.objectUri) {
+          void this.objectStore.erase(previous.objectUri);
+        }
+      }
+    }
+    this.enqueueOutbox(actor, {
+      aggregateType: "return_case",
+      aggregateId: current.id,
+      eventType: "erasure.completed",
+      payload: { caseId: current.id, orderId: order.id, fields: result.redactedFields.length },
+      idempotencyKey: `outbox-erase-${current.id}`.padEnd(16, "x"),
+    });
+    this.record(
+      actor,
+      "privacy.erased",
+      "return_case",
+      current.id,
+      { fields: result.redactedFields.length },
+      { traceId, caseId: current.id },
+    );
+    return result;
+  }
+
+  suspendSource(actor: Actor, id: string, traceId: string): SourceRecord {
+    const next = transitionSource(actor, this.getSource(id), "suspended");
+    this.putSource(next);
+    this.enqueueOutbox(actor, {
+      aggregateType: "source",
+      aggregateId: next.id,
+      eventType: "source.suspended",
+      payload: { slug: next.slug, status: next.status },
+      idempotencyKey: `outbox-suspend-${next.id}`.padEnd(16, "x"),
+    });
+    this.record(actor, "source.suspended", "source", next.id, { status: next.status }, { traceId });
+    return next;
+  }
+
+  reconcileAction(
+    actor: Actor,
+    actionId: string,
+    input: { status: ProviderActionStatus; correlationId: string; note: string },
+    traceId: string,
+  ): ProviderAction {
+    const current = this.actions.get(actionId);
+    if (!current) throw new NotFoundError(`provider action ${actionId} not found`);
+    const next = reconcileProviderAction({
+      actor,
+      action: current,
+      nextStatus: input.status,
+      correlationId: input.correlationId,
+      note: input.note,
+    });
+    this.actions.set(next.id, next);
+    this.enqueueOutbox(actor, {
+      aggregateType: "provider_action",
+      aggregateId: next.id,
+      eventType: "provider_action.reconciled",
+      payload: { status: next.status, caseId: next.caseId },
+      idempotencyKey: `outbox-recon-${next.id}-${next.status}`.padEnd(16, "x"),
+    });
+    this.record(
+      actor,
+      "provider_action.reconciled",
+      "provider_action",
+      next.id,
+      { status: next.status },
+      { traceId, caseId: next.caseId },
+    );
+    return next;
+  }
+
+  listOutbox(actor: Actor): OutboxEvent[] {
+    assertPermission(actor, "outbox:read");
+    return this.outbox.list(actor.tenantId);
+  }
+
+  publishOutbox(actor: Actor, limit = 20): { published: number; items: OutboxEvent[] } {
+    assertPermission(actor, "outbox:publish");
+    const now = new Date().toISOString();
+    const items: OutboxEvent[] = [];
+    for (const event of this.outbox.unpublished(actor.tenantId).slice(0, limit)) {
+      try {
+        const published = markOutboxPublished(event, now);
+        this.outbox.replace(published);
+        items.push(published);
+      } catch (error) {
+        this.outbox.replace(markOutboxFailed(event, (error as Error).message));
+      }
+    }
+    this.record(actor, "outbox.published", "outbox", actor.tenantId, { published: items.length }, { traceId: "outbox" });
+    return { published: items.length, items };
   }
 
   listAudit(actor: Actor, caseId: string | undefined): unknown[] {
@@ -640,6 +876,13 @@ export class Platform {
   ): ImportRun {
     this.imports.set(run.id, run);
     this.importKeys.remember(actor.tenantId, run.idempotencyKey, run);
+    this.enqueueOutbox(actor, {
+      aggregateType: "import_run",
+      aggregateId: run.id,
+      eventType: "import.finished",
+      payload: { status: run.status, sourceId: run.sourceId, products: run.productsUpserted },
+      idempotencyKey: `outbox-import-${run.idempotencyKey}`.slice(0, 128),
+    });
     this.record(actor, "import.finished", "import_run", run.id, extra.after, { traceId: extra.traceId });
     return run;
   }

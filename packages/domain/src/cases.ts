@@ -41,6 +41,16 @@ export function transitionCase(
   if (!canTransition(current.state, nextState)) {
     throw new ValidationError(`illegal transition ${current.state} -> ${nextState}`);
   }
+  const reconcileStates: CaseState[] = [
+    "merchant_review",
+    "return_in_transit",
+    "received",
+    "resolved",
+    "rejected",
+  ];
+  if (reconcileStates.includes(nextState) && actor.role !== "operator" && actor.role !== "merchant_admin") {
+    throw new ForbiddenError("only operator or merchant_admin may reconcile post-submit states");
+  }
   if (nextState === "submitted_for_approval") {
     if (!current.attestedAt || !current.attestedBy) {
       throw new ValidationError("user attestation is required before approval request");

@@ -22,4 +22,7 @@ export {
 } from "./temporal-port.js";
 export type { WorkflowHandle, WorkflowRuntime } from "./temporal-port.js";
 export { actorRowId, isUuid } from "./ids.js";
+export { SqlOutboxStore } from "./sql-outbox.js";
+export { MemoryObjectStore, UnboundObjectStore } from "./object-store.js";
+export type { ObjectStore } from "./object-store.js";
 

@@ -36,6 +36,10 @@
 - Source allowlist, AliExpress остаётся `draft`.
 - Secret scan в `npm run ci`.
 - Запрет коннектора/stealth в `check-no-connector`.
+- Transactional outbox без PII/секретов в payload.
+- Legal hold блокирует erasure; audit не стирается.
+- Structured logs без Authorization/DSN.
+- Rate limit на импорт источника.
 
 ## Остаточный риск
 

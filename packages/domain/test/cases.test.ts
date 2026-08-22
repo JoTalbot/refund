@@ -40,4 +40,20 @@ describe("case state machine", () => {
       ConflictError,
     );
   });
+
+  it("lets only operator or merchant_admin reconcile post-submit states", () => {
+    const submitted = draftCase({
+      state: "submitted",
+      version: 6,
+      attestedAt: "2026-08-22T10:05:00.000Z",
+      attestedBy: "customer-1",
+    });
+    expect(() => transitionCase(actor("customer"), submitted, "merchant_review", 6)).toThrow(
+      ForbiddenError,
+    );
+    const next = transitionCase(actor("operator"), submitted, "merchant_review", 6);
+    expect(next.state).toBe("merchant_review");
+    expect(next.version).toBe(7);
+  });
 });
+

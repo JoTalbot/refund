@@ -15,6 +15,7 @@ export class SqlPlatformStore {
       ...snapshot.actions,
       ...snapshot.imports,
       ...snapshot.actors,
+      ...snapshot.outbox,
     ]) {
       tenants.add(item.tenantId);
     }
@@ -147,9 +148,12 @@ export class SqlPlatformStore {
 
     for (const order of snapshot.orders) {
       await this.db.query(
-        `INSERT INTO orders (id, tenant_id, provider, external_id, ownership_verified_at, pii_ref, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)
-         ON CONFLICT (id) DO UPDATE SET ownership_verified_at = EXCLUDED.ownership_verified_at`,
+        `INSERT INTO orders (id, tenant_id, provider, external_id, ownership_verified_at, pii_ref, created_at, erased_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         ON CONFLICT (id) DO UPDATE SET
+           ownership_verified_at = EXCLUDED.ownership_verified_at,
+           pii_ref = EXCLUDED.pii_ref,
+           erased_at = EXCLUDED.erased_at`,
         [
           order.id,
           order.tenantId,
@@ -158,6 +162,7 @@ export class SqlPlatformStore {
           order.ownershipVerifiedAt,
           order.piiRef,
           order.createdAt,
+          order.erasedAt,
         ],
       );
       await this.db.query(`DELETE FROM order_lines WHERE order_id = $1`, [order.id]);
@@ -198,10 +203,22 @@ export class SqlPlatformStore {
 
     for (const item of snapshot.evidence) {
       await this.db.query(
-        `INSERT INTO case_evidence (id, case_id, object_uri, checksum, classification, expires_at)
-         VALUES ($1,$2,$3,$4,$5,$6)
-         ON CONFLICT (id) DO NOTHING`,
-        [item.id, item.caseId, item.objectUri, item.checksum, item.classification, item.expiresAt],
+        `INSERT INTO case_evidence (id, case_id, object_uri, checksum, classification, expires_at, legal_hold, erased_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         ON CONFLICT (id) DO UPDATE SET
+           object_uri = EXCLUDED.object_uri,
+           legal_hold = EXCLUDED.legal_hold,
+           erased_at = EXCLUDED.erased_at`,
+        [
+          item.id,
+          item.caseId,
+          item.objectUri,
+          item.checksum,
+          item.classification,
+          item.expiresAt,
+          item.legalHold,
+          item.erasedAt,
+        ],
       );
     }
 
@@ -255,6 +272,32 @@ export class SqlPlatformStore {
           ],
         );
       }
+    }
+
+    for (const item of snapshot.outbox) {
+      await this.db.query(
+        `INSERT INTO outbox_events (
+           id, tenant_id, aggregate_type, aggregate_id, event_type, payload,
+           created_at, published_at, published_attempts, last_error, idempotency_key
+         ) VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11)
+         ON CONFLICT (id) DO UPDATE SET
+           published_at = EXCLUDED.published_at,
+           published_attempts = EXCLUDED.published_attempts,
+           last_error = EXCLUDED.last_error`,
+        [
+          item.id,
+          item.tenantId,
+          item.aggregateType,
+          item.aggregateId,
+          item.eventType,
+          JSON.stringify(item.payload),
+          item.createdAt,
+          item.publishedAt,
+          item.publishedAttempts,
+          item.lastError,
+          item.idempotencyKey,
+        ],
+      );
     }
 
     for (const item of snapshot.imports) {
@@ -377,6 +420,7 @@ export class SqlPlatformStore {
         : null,
       piiRef: row.pii_ref ? String(row.pii_ref) : null,
       createdAt: new Date(String(row.created_at)).toISOString(),
+      erasedAt: row.erased_at ? new Date(String(row.erased_at)).toISOString() : null,
       lines: lineRows.rows
         .filter((line) => String(line.order_id) === String(row.id))
         .map((line) => ({
@@ -449,12 +493,29 @@ export class SqlPlatformStore {
       checksum: String(row.checksum),
       classification: String(row.classification),
       expiresAt: row.expires_at ? new Date(String(row.expires_at)).toISOString() : null,
+      legalHold: Boolean(row.legal_hold),
+      erasedAt: row.erased_at ? new Date(String(row.erased_at)).toISOString() : null,
     }));
 
     for (const item of snapshot.cases) {
       const order = snapshot.orders.find((entry) => entry.id === item.orderId);
       item.ownershipVerifiedAt = order?.ownershipVerifiedAt ?? null;
     }
+
+    const outboxRows = await this.db.query<Record<string, unknown>>(`SELECT * FROM outbox_events`);
+    snapshot.outbox = outboxRows.rows.map((row) => ({
+      id: String(row.id),
+      tenantId: String(row.tenant_id),
+      aggregateType: String(row.aggregate_type),
+      aggregateId: String(row.aggregate_id),
+      eventType: String(row.event_type),
+      payload: (row.payload as Record<string, unknown>) ?? {},
+      createdAt: new Date(String(row.created_at)).toISOString(),
+      publishedAt: row.published_at ? new Date(String(row.published_at)).toISOString() : null,
+      publishedAttempts: Number(row.published_attempts ?? 0),
+      lastError: row.last_error ? String(row.last_error) : null,
+      idempotencyKey: String(row.idempotency_key ?? row.id),
+    }));
 
     const importRows = await this.db.query<Record<string, unknown>>(`SELECT * FROM import_runs`);
     snapshot.imports = importRows.rows.map((row) => ({

@@ -62,4 +62,4 @@ curl -s http://127.0.0.1:3000/health
 
 ## Статус
 
-Этапы 0–2: foundation, API MVP, eligibility, экспорт продавца, SQL-снимок, boot, JWKS, durable import worker. Коннекторов маркетплейсов нет. `aliexpress-ua` остаётся `draft`.
+Этапы 0–2 плюс outbox/erasure/сверка: foundation, API MVP, eligibility, экспорт продавца, SQL-снимок, boot, JWKS, durable import worker, transactional outbox, legal hold, PII erasure. Коннекторов маркетплейсов нет. `aliexpress-ua` остаётся `draft`.

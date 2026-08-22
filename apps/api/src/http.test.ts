@@ -173,6 +173,95 @@ describe("API MVP", () => {
     ).toBe(503);
     expect((await customer("GET", "/v1/me")).body).toMatchObject({ role: "customer", tenantId: TENANT });
     expect(((await customer("GET", "/v1/return-cases")).body as { items: unknown[] }).items.length).toBeGreaterThan(0);
+
+    const submittedCase = submitted.body as { case: { id: string; version: number }; action: { id: string } };
+    expect(
+      (
+        await operator("POST", `/v1/return-cases/${submittedCase.case.id}/transition`, {
+          next_state: "merchant_review",
+          expected_version: submittedCase.case.version,
+        })
+      ).body,
+    ).toMatchObject({ state: "merchant_review" });
+    expect(
+      ((await customer("GET", `/v1/return-cases/${submittedCase.case.id}/evidence`)).body as { items: unknown[] }).items,
+    ).toHaveLength(1);
+    expect(((await operator("GET", "/v1/outbox")).body as { items: unknown[] }).items.length).toBeGreaterThan(0);
+    const service = as("service_agent");
+    expect((await service("POST", "/v1/outbox/publish", { limit: 10 })).status).toBe(200);
+    expect(
+      (
+        await operator("POST", `/v1/provider-actions/${submittedCase.action.id}/reconcile`, {
+          status: "submitted",
+          correlation_id: "manual-desk-1001",
+          note: "Merchant emailed a ticket id",
+        })
+      ).body,
+    ).toMatchObject({ status: "submitted", responseRef: "manual-desk-1001" });
+    const erased = await as("compliance_admin")("POST", `/v1/return-cases/${submittedCase.case.id}/erasure`, {
+      reason: "buyer erasure request",
+    });
+    expect(erased.status).toBe(200);
+    expect(erased.body).toMatchObject({ order: { piiRef: null } });
+  });
+
+  it("rate-limits a source and refuses secret-like log payloads", async () => {
+    const { MemoryLogSink } = await import("@refund/domain");
+    const platform = new Platform();
+    const logs = new MemoryLogSink();
+    const handle = createHandler(platform, { allowDevActor: true, logger: logs });
+    const merchant = (method: string, path: string, body: unknown = null) =>
+      handle({
+        method,
+        path,
+        body,
+        query: {},
+        headers: {
+          "x-actor-id": "merchant_admin-1",
+          "x-actor-role": "merchant_admin",
+          "x-tenant-id": TENANT,
+          "x-step-up": "true",
+          "x-trace-id": "trace-limit",
+        },
+      });
+    const source = await merchant("POST", "/v1/sources", {
+      slug: "merchant-self-export",
+      owner: "demo-merchant",
+      base_url: "https://merchant.example.invalid/",
+      permission_basis: "Signed shop-owner JSON export",
+      policy_url: "https://merchant.example.invalid/returns",
+      rate_limit_per_minute: 1,
+      allowed_fields: ["title"],
+      retention_days: 30,
+    });
+    const sourceId = (source.body as { id: string }).id;
+    await merchant("POST", `/v1/sources/${sourceId}/review`);
+    await handle({
+      method: "POST",
+      path: `/v1/sources/${sourceId}/approve`,
+      body: {},
+      query: {},
+      headers: {
+        "x-actor-id": "compliance_admin-1",
+        "x-actor-role": "compliance_admin",
+        "x-tenant-id": TENANT,
+        "x-step-up": "true",
+      },
+    });
+    const first = await merchant("POST", "/v1/import-runs", {
+      source_id: sourceId,
+      document: exportDoc,
+      idempotency_key: "import-rate-limit-0001",
+    });
+    expect(first.status).toBe(200);
+    const second = await merchant("POST", "/v1/import-runs", {
+      source_id: sourceId,
+      document: exportDoc,
+      idempotency_key: "import-rate-limit-0002",
+    });
+    expect(second.status).toBe(429);
+    expect(logs.events.some((event) => event.traceId === "trace-limit")).toBe(true);
+    expect(JSON.stringify(logs.events)).not.toMatch(/authorization|password|ghp_/i);
   });
 
   it("accepts a verified bearer token and rejects a forged one", async () => {

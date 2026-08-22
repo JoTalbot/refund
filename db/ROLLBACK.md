@@ -2,6 +2,25 @@
 
 Целевая СУБД: PostgreSQL 16+. Миграции применяются в транзакции. План восстановления не удаляет WORM-копию аудита вне БД.
 
+## 0006_outbox_retention.sql
+
+```sql
+BEGIN;
+DROP INDEX IF EXISTS outbox_events_unpublished;
+DROP INDEX IF EXISTS outbox_events_tenant_idempotency;
+ALTER TABLE outbox_events
+  DROP COLUMN IF EXISTS idempotency_key,
+  DROP COLUMN IF EXISTS last_error,
+  DROP COLUMN IF EXISTS published_attempts;
+ALTER TABLE orders DROP COLUMN IF EXISTS erased_at;
+ALTER TABLE case_evidence
+  DROP COLUMN IF EXISTS erased_at,
+  DROP COLUMN IF EXISTS legal_hold;
+COMMIT;
+```
+
+Метаданные стирания откатываются; уже опубликованные outbox-события во внешних шинах не отзываются этим SQL.
+
 ## 0005_shopify_draft.sql
 
 ```sql

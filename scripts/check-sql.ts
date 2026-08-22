@@ -25,6 +25,9 @@ const required = [
   "'draft'",
   "aliexpress-ua",
   "shopify-merchant",
+  "outbox_events",
+  "legal_hold",
+  "erased_at",
 ];
 
 const combined = files.map((name) => readFileSync(join(dir, name), "utf8")).join("\n");

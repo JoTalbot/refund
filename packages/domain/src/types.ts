@@ -26,7 +26,12 @@ export const PERMISSIONS = [
   "approvals:request",
   "approvals:decide",
   "provider_actions:submit",
+  "provider_actions:reconcile",
   "audit:read",
+  "outbox:read",
+  "outbox:publish",
+  "sources:suspend",
+  "privacy:erase",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -217,6 +222,7 @@ export interface OrderRecord {
   piiRef: string | null;
   lines: OrderLine[];
   createdAt: string;
+  erasedAt: string | null;
 }
 
 export interface EligibilityFacts {
@@ -261,11 +267,47 @@ export interface JobLease {
   version: number;
 }
 
+export const EVIDENCE_CLASSIFICATION_VALUES = [
+  "unboxing_video",
+  "photo",
+  "receipt",
+  "correspondence",
+  "other",
+] as const;
+export type EvidenceClassification = (typeof EVIDENCE_CLASSIFICATION_VALUES)[number];
+
 export interface CaseEvidence {
   id: string;
   caseId: string;
   objectUri: string;
   checksum: string;
-  classification: string;
+  classification: EvidenceClassification | string;
   expiresAt: string | null;
+  legalHold: boolean;
+  erasedAt: string | null;
+}
+
+export interface OutboxEvent {
+  id: string;
+  tenantId: string;
+  aggregateType: string;
+  aggregateId: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+  publishedAt: string | null;
+  publishedAttempts: number;
+  lastError: string | null;
+  idempotencyKey: string;
+}
+
+export interface StructuredLog {
+  level: "info" | "warn" | "error";
+  message: string;
+  traceId: string;
+  actorId?: string;
+  caseId?: string;
+  sourceId?: string;
+  action?: string;
+  status?: number;
 }

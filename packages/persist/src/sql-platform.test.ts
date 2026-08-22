@@ -94,5 +94,8 @@ describe("SQL platform snapshot", () => {
     expect(loaded.ownershipVerifiedAt).toBe("2026-08-20T10:00:00.000Z");
     expect(restored.listApprovals(actor("approver"), draft.id)[0]?.decision).toBe("approved");
     expect(restored.getSource("merchant-self-export").status).toBe("approved");
+    expect(restored.listOutbox(actor("merchant_admin")).some((item) => item.eventType === "case.submitted")).toBe(
+      true,
+    );
   });
 });

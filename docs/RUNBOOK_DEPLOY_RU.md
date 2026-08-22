@@ -38,6 +38,9 @@ npm run start -w @refund/worker
 - `GET /health` — процесс жив, поле `persistence`
 - `GET /ready` — готов принимать трафик (`jobs`, `oidc`)
 - `GET /v1/jobs` — очередь lease (нужны права import/audit)
+- `GET /v1/outbox` / `POST /v1/outbox/publish` — неопубликованные доменные события
+- `POST /v1/return-cases/{id}/transition` — сверка статуса после submit
+- `POST /v1/return-cases/{id}/erasure` — стирание PII (compliance, не при legal hold)
 
 ## 4. Источники
 
@@ -58,3 +61,4 @@ npm run start -w @refund/worker
 - Живой `pg.Pool` должен открыть деплой после резолва секрета (`bindPgPool` / `openPostgres`).
 - Temporal Cloud — только если резолвится `TEMPORAL_ADDRESS_SECRET_ID`.
 - Shopify Admin API client в репозитории отсутствует намеренно.
+- Object store: `OBJECT_STORE_BUCKET` (secret manager). Без binding стирается только метаданные URI.
