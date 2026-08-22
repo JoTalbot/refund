@@ -1,0 +1,37 @@
+export class DomainError extends Error {
+  readonly code: string;
+
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = "DomainError";
+    this.code = code;
+  }
+}
+
+export class ForbiddenError extends DomainError {
+  constructor(message: string) {
+    super("forbidden", message);
+    this.name = "ForbiddenError";
+  }
+}
+
+export class ConflictError extends DomainError {
+  constructor(message: string) {
+    super("conflict", message);
+    this.name = "ConflictError";
+  }
+}
+
+export class ValidationError extends DomainError {
+  constructor(message: string) {
+    super("validation", message);
+    this.name = "ValidationError";
+  }
+}
+
+export class AuditImmutabilityError extends DomainError {
+  constructor(message = "audit_events is append-only") {
+    super("audit_immutable", message);
+    this.name = "AuditImmutabilityError";
+  }
+}
