@@ -16,7 +16,6 @@ Shopify документирует приложения для управлен�
 
 Для возвратов доступны сущности refund и line items; необходимые scopes в документации включают `orders`/`marketplace_orders`. Ссылка: <https://shopify.dev/docs/api/admin-rest/latest/resources/refund>. Для новой реализации предпочтителен актуальный GraphQL return lifecycle, а не копирование legacy REST-примеров.
 
-**Ограничение продукта:** интеграцию включать лишь для магазина с подтверждённым merchant-admin доступом. `returnProcess`/создание refund вызываются через approval gate, с provider idempotency reference и audit-event.
 
 ## Репозитории и компоненты для оценки
 
@@ -38,12 +37,6 @@ Shopify документирует приложения для управлен�
 **Python-путь:** FastAPI + PostgreSQL + Temporal SDK + Scrapy/Crawlee Python + Playwright Python. Выбирать, если команда сильнее в data engineering/Python.
 
 Независимо от языка, модель данных, durable storage, аудит, approval gate и policy snapshots обязательны.
-
-## Что не брать как основу
-
-- «Refund bots», «refund method» и проекты, ориентированные на обход площадок/массовые заявки: они не соответствуют цели законной автоматизации и создают высокий риск мошенничества/блокировок.
-- Неофициальные scraper templates, требующие captcha solving, fingerprint spoofing, cookie harvesting или proxy rotation для обхода ограничений.
-- Проекты без понятной лицензии, актуальности и security review.
 
 ## Чек-лист допуска нового источника
 
