@@ -1,0 +1,15 @@
+title = "refund secret scan"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documentation placeholders and examples"
+paths = [
+  '''\.env\.example$''',
+  '''docs/.*''',
+]
+regexes = [
+  '''example-refund-''',
+  '''secret_id_placeholder''',
+]

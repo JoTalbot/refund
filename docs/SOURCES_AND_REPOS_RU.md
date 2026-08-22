@@ -30,6 +30,13 @@ Shopify документирует приложения для управлен�
 | [anthropics/skills](https://github.com/anthropics/skills) и [agentskills.io](https://agentskills.io) | Формат переносимых agent skills | Основа для `.agents/skills/*/SKILL.md`; локальные skills уже добавлены в репозиторий |
 | [wshobson/agents](https://github.com/wshobson/agents) | Каталог skills, включая coordination/workflow patterns | Только как библиотека идей; pin/review лицензии и содержимого до включения |
 
+## Записи Source Registry
+
+| slug | status | Комментарий |
+|---|---|---|
+| aliexpress-ua | draft | Только ручной гайд покупателя в Украине. См. `docs/sources/aliexpress-ua.md`. Импорт и Open Platform запрещены. |
+| shopify-merchant | draft | Свой магазин, Admin GraphQL после OAuth. Клиента API нет. `docs/sources/shopify-merchant.md`. |
+
 ## Рекомендованный выбор для MVP
 
 **TypeScript-путь:** NestJS/Fastify + PostgreSQL + Temporal + Crawlee + Playwright + Shopify Admin GraphQL. Однородный TS-стек удобен для веб-консоли и коннекторов. Браузерный слой допустим только при одобрении источника.

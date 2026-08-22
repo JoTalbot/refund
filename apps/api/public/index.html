@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Refund Operations</title>
+  <style>
+    :root {
+      --ink: #1c1915;
+      --paper: #f3eee4;
+      --card: #fffaf2;
+      --line: #d8cfc0;
+      --muted: #6d6458;
+      --accent: #9a3412;
+      --ok: #3f6212;
+      --warn: #92400e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 16px/1.5 "Source Serif 4", "Iowan Old Style", Georgia, serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: baseline;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--line);
+    }
+    header h1 { font-size: 1.25rem; margin: 0; letter-spacing: -0.02em; }
+    header p { margin: 0; color: var(--muted); font-size: 0.92rem; }
+    nav {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      border-bottom: 1px solid var(--line);
+    }
+    nav button, .roles button, .actions button {
+      font: inherit;
+      border: 1px solid var(--line);
+      background: var(--card);
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    nav button[aria-current="page"], .roles button.active { background: var(--ink); color: var(--paper); }
+    main { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1.25rem; padding: 1.25rem 1.5rem 3rem; }
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 1rem 1.1rem;
+    }
+    h2 { font-size: 1.05rem; margin: 0 0 0.75rem; }
+    .roles, .actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.8rem; }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin: 0.4rem 0 0.15rem; }
+    input, textarea, select {
+      width: 100%;
+      font: inherit;
+      padding: 0.4rem 0.5rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #1c1915;
+      color: #f3eee4;
+      padding: 0.75rem;
+      border-radius: 10px;
+      font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+      min-height: 8rem;
+    }
+    .ok { color: var(--ok); }
+    .bad { color: var(--accent); }
+    ul.guide { padding-left: 1.1rem; }
+    ul.guide li { margin: 0.35rem 0; }
+    .note { color: var(--muted); font-size: 0.9rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    td, th { text-align: left; padding: 0.3rem 0.2rem; border-bottom: 1px solid var(--line); }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Refund Operations</h1>
+      <p>Законные возвраты: свой заказ, human approval, без коннектора маркетплейса</p>
+    </div>
+    <p id="who">роль не выбрана</p>
+  </header>
+  <nav>
+    <button type="button" data-tab="work" aria-current="page">Консоль кейса</button>
+    <button type="button" data-tab="guide">AliExpress UA</button>
+    <button type="button" data-tab="shopify">Shopify draft</button>
+  </nav>
+  <main>
+    <div id="work">
+      <section>
+        <h2>1. Роль (только dev-заголовки)</h2>
+        <div class="roles" id="roles"></div>
+        <p class="note">В production эти заголовки выключены. Approver ходит со step-up.</p>
+        <div class="actions">
+          <button type="button" id="refresh">Обновить списки</button>
+          <button type="button" id="ready">GET /ready</button>
+          <button type="button" id="run-all">Прогнать весь сценарий</button>
+        </div>
+      </section>
+      <section>
+        <h2>2. Источник и импорт экспорта продавца</h2>
+        <p class="note">AliExpress остаётся <code>draft</code>. Импорт — только после approve merchant-self-export.</p>
+        <div class="actions">
+          <button type="button" id="create-source">Создать источник</button>
+          <button type="button" id="review-source">На review</button>
+          <button type="button" id="approve-source">Approve (compliance)</button>
+          <button type="button" id="import-ae">Проверить блок AliExpress</button>
+          <button type="button" id="import-ok">Импортировать фикстуру</button>
+        </div>
+        <table id="sources"><tbody></tbody></table>
+      </section>
+      <section>
+        <h2>3. Свой заказ и кейс</h2>
+        <label>Внешний номер заказа</label>
+        <input id="ext-id" value="ORD-1001" />
+        <div class="actions">
+          <button type="button" id="import-order">Импорт заказа (владелец)</button>
+          <button type="button" id="open-case">Создать черновик</button>
+          <button type="button" id="elig">Eligibility UA / не как в описании</button>
+          <button type="button" id="evidence">Доказательство URI</button>
+          <button type="button" id="attest">Attestation</button>
+          <button type="button" id="ask">Запросить approval</button>
+          <button type="button" id="decide">Одобрить (другой человек)</button>
+          <button type="button" id="submit-bad">Submit AliExpress — должен быть отказ</button>
+          <button type="button" id="submit-ok">Submit manual_guidance_only</button>
+        </div>
+      </section>
+      <section>
+        <h2>4. После submit: сверка, outbox, erasure</h2>
+        <p class="note">Денежный успех не выводится из UI. Сверку пишет оператор по письму/тикету продавца. Erasure — только compliance, и не при legal hold.</p>
+        <div class="actions">
+          <button type="button" id="advance">Merchant review</button>
+          <button type="button" id="reconcile">Reconcile action</button>
+          <button type="button" id="outbox">GET /v1/outbox</button>
+          <button type="button" id="publish">Publish outbox</button>
+          <button type="button" id="hold">Legal hold</button>
+          <button type="button" id="erase">Erasure PII</button>
+        </div>
+      </section>
+    </div>
+    <div id="shopify" hidden>
+      <section>
+        <h2>Shopify своего магазина — только draft</h2>
+        <p class="note">Коннектора Admin API в репозитории нет. Источник <code>shopify-merchant</code> остаётся draft, пока нет OAuth и approve.</p>
+        <ul class="guide">
+          <li>Планируемые scopes: <code>read_orders</code>, <code>write_returns</code>, <code>read_returns</code>, <code>read_products</code>.</li>
+          <li>Токен — только secret manager, не Git.</li>
+          <li>Документация: shopify.dev returns apps.</li>
+        </ul>
+      </section>
+    </div>
+    <div id="guide" hidden>
+      <section>
+        <h2>Покупатель в Украине, свой заказ AliExpress</h2>
+        <p class="note">Платформа не логинится и не подаёт спор. Ниже — ручной чеклист. Полный текст: docs/providers/ALIEXPRESS_UA_BUYER_GUIDE_RU.md</p>
+        <ul class="guide">
+          <li>Войдите в <strong>свой</strong> аккаунт на aliexpress.com. Чужой пароль — стоп.</li>
+          <li>Не подтверждайте получение, если посылки нет.</li>
+          <li><strong>Отмена</strong> — пока заказ не отгружен, Cancel в карточке.</li>
+          <li><strong>Недоставка</strong> — после гарантированной даты, Returns/Refunds → Item not received, до нуля Buyer Protection.</li>
+          <li><strong>Брак / не то</strong> — видео вскрытия, Not as described, честная сумма.</li>
+          <li><strong>Передумали</strong> — Free Return только если бейдж есть на заказе; из Украины локального склада часто нет.</li>
+          <li>Эскалация — Escalate to AliExpress. Не платите «таможню» в мессенджере.</li>
+          <li>Таможня: ориентир ст. 374 ТКУ, порог 150 €. Сверяйте zakon.rada.gov.ua.</li>
+        </ul>
+      </section>
+    </div>
+    <section>
+      <h2>Журнал ответа</h2>
+      <pre id="out">Готово. Выберите роль и шаг.</pre>
+      <h2>Кейсы тенанта</h2>
+      <table id="cases"><tbody></tbody></table>
+    </section>
+  </main>
+  <script>
+    const TENANT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const ROLES = ["merchant_admin", "compliance_admin", "customer", "approver", "operator"];
+    const state = { role: "merchant_admin", sourceId: "", caseId: "", approvalId: "", orderId: "", actionId: "", evidenceId: "", caseVersion: 1 };
+    const fixture = {
+      export_id: "exp-console-1",
+      exported_at: "2026-08-22T09:00:00.000Z",
+      merchant_id: "merchant-demo",
+      consent: { granted_by: "owner@merchant.example.invalid", granted_at: "2026-08-22T08:55:00.000Z" },
+      products: [{
+        id: "SKU-MUG-1", title: "Stoneware mug 300ml",
+        url: "https://merchant.example.invalid/products/mug-1",
+        brand: "Example Home", sku: "SKU-MUG-1",
+        price: { amount: "12.50", currency: "EUR" }, availability: "in_stock"
+      }]
+    };
+
+    const out = document.getElementById("out");
+    const who = document.getElementById("who");
+    const roles = document.getElementById("roles");
+    ROLES.forEach((role) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = role;
+      button.dataset.role = role;
+      button.addEventListener("click", () => setRole(role));
+      roles.appendChild(button);
+    });
+
+    function setRole(role) {
+      state.role = role;
+      who.textContent = role + " @ " + TENANT.slice(0, 8);
+      [...roles.children].forEach((node) => node.classList.toggle("active", node.dataset.role === role));
+    }
+    setRole("merchant_admin");
+
+    document.querySelectorAll("nav button").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll("nav button").forEach((item) => item.removeAttribute("aria-current"));
+        button.setAttribute("aria-current", "page");
+        document.getElementById("work").hidden = button.dataset.tab !== "work";
+        document.getElementById("guide").hidden = button.dataset.tab !== "guide";
+        document.getElementById("shopify").hidden = button.dataset.tab !== "shopify";
+      });
+    });
+
+    async function api(method, path, body) {
+      const response = await fetch(path, {
+        method,
+        headers: {
+          "content-type": "application/json",
+          "x-actor-id": state.role + "-1",
+          "x-actor-role": state.role,
+          "x-tenant-id": TENANT,
+          "x-step-up": "true",
+          "x-trace-id": "console-" + Date.now()
+        },
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const data = await response.json();
+      out.textContent = method + " " + path + " → " + response.status + "\n" + JSON.stringify(data, null, 2);
+      out.className = response.ok ? "ok" : "bad";
+      return data;
+    }
+
+    async function refresh() {
+      const previous = state.role;
+      setRole(previous === "customer" ? "merchant_admin" : previous);
+      const sources = await api("GET", "/v1/sources");
+      const body = document.querySelector("#sources tbody");
+      body.innerHTML = "";
+      (sources.items || []).forEach((source) => {
+        const row = document.createElement("tr");
+        row.innerHTML = "<td>" + source.slug + "</td><td>" + source.status + "</td>";
+        body.appendChild(row);
+        if (source.slug === "merchant-self-export") state.sourceId = source.id;
+      });
+      setRole("customer");
+      const cases = await api("GET", "/v1/return-cases");
+      const caseBody = document.querySelector("#cases tbody");
+      caseBody.innerHTML = "";
+      (cases.items || []).forEach((item) => {
+        const row = document.createElement("tr");
+        row.innerHTML = "<td>" + item.id.slice(0, 8) + "</td><td>" + item.state + "</td><td>" + item.eligibility + "</td>";
+        caseBody.appendChild(row);
+        state.caseId = item.id;
+        state.caseVersion = item.version;
+      });
+      setRole(previous);
+    }
+
+    document.getElementById("refresh").onclick = refresh;
+    document.getElementById("ready").onclick = () => api("GET", "/ready");
+    document.getElementById("create-source").onclick = async () => {
+      setRole("merchant_admin");
+      const created = await api("POST", "/v1/sources", {
+        slug: "merchant-self-export",
+        owner: "demo-merchant",
+        base_url: "https://merchant.example.invalid/",
+        permission_basis: "Signed shop-owner JSON export",
+        policy_url: "https://merchant.example.invalid/returns",
+        rate_limit_per_minute: 20,
+        allowed_fields: ["title", "sku", "price"],
+        retention_days: 180
+      });
+      state.sourceId = created.id || state.sourceId;
+      refresh();
+    };
+    document.getElementById("review-source").onclick = async () => {
+      setRole("merchant_admin");
+      await api("POST", "/v1/sources/" + state.sourceId + "/review", {});
+      refresh();
+    };
+    document.getElementById("approve-source").onclick = async () => {
+      setRole("compliance_admin");
+      await api("POST", "/v1/sources/" + state.sourceId + "/approve", {});
+      refresh();
+    };
+    document.getElementById("import-ae").onclick = async () => {
+      setRole("merchant_admin");
+      await api("POST", "/v1/import-runs", {
+        source_id: "aliexpress-ua",
+        document: fixture,
+        idempotency_key: "import-ae-" + Date.now()
+      });
+    };
+    document.getElementById("import-ok").onclick = async () => {
+      setRole("merchant_admin");
+      await api("POST", "/v1/import-runs", {
+        source_id: state.sourceId,
+        document: fixture,
+        idempotency_key: "import-ok-" + Date.now()
+      });
+    };
+    document.getElementById("import-order").onclick = async () => {
+      setRole("customer");
+      const order = await api("POST", "/v1/orders/import", {
+        provider: "merchant-self",
+        external_id: document.getElementById("ext-id").value,
+        ownership_verified_at: new Date().toISOString(),
+        lines: [{ sku: "SKU-MUG-1", title: "Stoneware mug 300ml", quantity: 1, amount: "12.50", currency: "EUR" }],
+        idempotency_key: "order-" + Date.now()
+      });
+      state.orderId = order.id;
+    };
+    document.getElementById("open-case").onclick = async () => {
+      setRole("customer");
+      const opened = await api("POST", "/v1/return-cases", { order_id: state.orderId });
+      state.caseId = opened.id;
+      refresh();
+    };
+    document.getElementById("elig").onclick = () => {
+      setRole("customer");
+      return api("POST", "/v1/return-cases/" + state.caseId + "/eligibility", {
+        region: "UA", condition: "not_as_described", days_since_delivery: 2, category: "home", delivered: true
+      });
+    };
+    document.getElementById("evidence").onclick = () => {
+      setRole("customer");
+      return api("POST", "/v1/return-cases/" + state.caseId + "/evidence", {
+        object_uri: "s3://example-refund-artifacts/demo/unbox.mp4",
+        checksum: "a".repeat(64),
+        classification: "unboxing_video"
+      });
+    };
+    document.getElementById("attest").onclick = () => {
+      setRole("customer");
+      return api("POST", "/v1/return-cases/" + state.caseId + "/attestations", {});
+    };
+    document.getElementById("ask").onclick = async () => {
+      setRole("customer");
+      const approval = await api("POST", "/v1/return-cases/" + state.caseId + "/approval-requests", {
+        reason: "Свой заказ, товар не соответствует описанию",
+        idempotency_key: "apr-" + Date.now()
+      });
+      state.approvalId = approval.id;
+    };
+    document.getElementById("decide").onclick = () => {
+      setRole("approver");
+      return api("POST", "/v1/return-cases/" + state.caseId + "/approval-requests/" + state.approvalId + "/decision", {
+        decision: "approved",
+        reason: "Заказ принадлежит заявителю, доказательства на месте"
+      });
+    };
+    document.getElementById("submit-bad").onclick = () => {
+      setRole("approver");
+      api("POST", "/v1/return-cases/" + state.caseId + "/submit", {
+        idempotency_key: "sub-ae-" + Date.now(),
+        provider: "aliexpress-ua",
+        action_type: "create_return"
+      });
+    };
+    document.getElementById("submit-ok").onclick = async () => {
+      setRole("approver");
+      const submitted = await api("POST", "/v1/return-cases/" + state.caseId + "/submit", {
+        idempotency_key: "sub-ok-" + Date.now(),
+        provider: "manual",
+        action_type: "manual_guidance_only"
+      });
+      state.actionId = submitted.action && submitted.action.id;
+      state.caseVersion = submitted.case && submitted.case.version;
+    };
+    document.getElementById("advance").onclick = async () => {
+      setRole("operator");
+      const next = await api("POST", "/v1/return-cases/" + state.caseId + "/transition", {
+        next_state: "merchant_review",
+        expected_version: state.caseVersion
+      });
+      state.caseVersion = next.version || state.caseVersion;
+    };
+    document.getElementById("reconcile").onclick = () => {
+      setRole("operator");
+      return api("POST", "/v1/provider-actions/" + state.actionId + "/reconcile", {
+        status: "submitted",
+        correlation_id: "manual-desk-" + Date.now(),
+        note: "Письмо продавца с номером тикета"
+      });
+    };
+    document.getElementById("outbox").onclick = () => {
+      setRole("operator");
+      return api("GET", "/v1/outbox");
+    };
+    document.getElementById("publish").onclick = () => {
+      setRole("service_agent");
+      return api("POST", "/v1/outbox/publish", { limit: 20 });
+    };
+    document.getElementById("hold").onclick = () => {
+      setRole("operator");
+      return api("POST", "/v1/return-cases/" + state.caseId + "/evidence/" + state.evidenceId + "/legal-hold", {
+        legal_hold: true
+      });
+    };
+    document.getElementById("erase").onclick = () => {
+      setRole("compliance_admin");
+      return api("POST", "/v1/return-cases/" + state.caseId + "/erasure", {
+        reason: "Запрос субъекта на удаление PII"
+      });
+    };
+    document.getElementById("run-all").onclick = async () => {
+      setRole("merchant_admin");
+      await document.getElementById("create-source").onclick();
+      await document.getElementById("review-source").onclick();
+      await document.getElementById("approve-source").onclick();
+      await document.getElementById("import-ok").onclick();
+      await document.getElementById("import-order").onclick();
+      await document.getElementById("open-case").onclick();
+      await document.getElementById("elig").onclick();
+      await document.getElementById("evidence").onclick();
+      await document.getElementById("attest").onclick();
+      await document.getElementById("ask").onclick();
+      await document.getElementById("decide").onclick();
+      await document.getElementById("submit-ok").onclick();
+      await document.getElementById("advance").onclick();
+      await document.getElementById("outbox").onclick();
+    };
+  </script>
+</body>
+</html>

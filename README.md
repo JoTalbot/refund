@@ -24,10 +24,42 @@
 
 ```text
 .agents/skills/       переносимые навыки для рабочих агентов (SKILL.md)
-docs/                 ТЗ, ADR, реестры источников
+apps/api/             тонкий HTTP-фасад (health + draft source)
+packages/domain/      RBAC, audit, approval gate, state machines
+db/migrations/        PostgreSQL 16, append-only audit
+docs/                 ТЗ, research, source registry, buyer guides
+infra/terraform/      каркас managed Postgres + WORM audit bucket
+scripts/              secret-scan, link validation, SQL/connector checks
 AGENTS.md             правила параллельной работы и устойчивости
 ```
 
+## Разработка
+
+```bash
+npm ci
+npm run ci
+```
+
+Шаблон GitHub Actions: [`docs/ci/github-actions-ci.yml`](docs/ci/github-actions-ci.yml). Скопируйте его в `.github/workflows/ci.yml` владельцем репозитория (у GitHub App нет permission `workflows`).
+
+Секреты не коммитить. Локальные значения — secret manager или незакоммиченный `.env` из `.env.example`.
+
+Гайд покупателя AliExpress (UA, только ручной сценарий): [`docs/providers/ALIEXPRESS_UA_BUYER_GUIDE_RU.md`](docs/providers/ALIEXPRESS_UA_BUYER_GUIDE_RU.md). Источник `aliexpress-ua` остаётся `draft`. Shopify своего магазина: [`docs/sources/shopify-merchant.md`](docs/sources/shopify-merchant.md) (`draft`, без Admin API client).
+
+Выкладка: [`docs/RUNBOOK_DEPLOY_RU.md`](docs/RUNBOOK_DEPLOY_RU.md).
+
+Локальный API и консоль (заголовки актора только вне `production`):
+
+```bash
+npm run dev:api
+# консоль: http://127.0.0.1:3000/
+curl -s http://127.0.0.1:3000/health
+```
+
+Старт поднимает PGlite, накатывает миграции и гидратирует снимок. OIDC: `OIDC_ISSUER_URL`, `OIDC_AUDIENCE`, `OIDC_JWKS_URL`. DSN Postgres — только через `DATABASE_URL_SECRET_ID` (значение инжектит secret manager). Worker: `npm run start -w @refund/worker`.
+
+Миграции проверяются в CI через PGlite. Живой Postgres 16: `docker compose up -d`, затем `npx tsx scripts/apply-migrations.ts | psql postgres://refund@localhost:5432/refund`.
+
 ## Статус
 
-Этап 0 — архитектура и правила работы. До разработки коннектора для магазина его владелец должен быть добавлен в allowlist источников и пройти юридико-техническую проверку.
+Этапы 0–2 плюс outbox/erasure/сверка: foundation, API MVP, eligibility, экспорт продавца, SQL-снимок, boot, JWKS, durable import worker, transactional outbox, legal hold, PII erasure. Коннекторов маркетплейсов нет. `aliexpress-ua` остаётся `draft`.

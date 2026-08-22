@@ -6,7 +6,9 @@
 
 ### Назначение
 Система помогает магазину, оператору сервиса возвратов или владельцу заказа обрабатывать **правомерные** возвраты. Грабер/импортер собирает данные о товарах и политиках возврата из разрешённых источников, чтобы оператор мог проверить условия возврата по реальному заказу.
-- поиск способов получить необоснованную компенсацию;
+
+Система **не предназначена** для:
+- поиска способов получить необоснованную компенсацию;
 - автоматическая подача ложных заявок, подделка доказательств, обход защит и ограничений площадок;
 - работа с чужими аккаунтами/заказами, cookie, паролями, платёжными данными;
 - автосписания/возвраты без прав доступа продавца, подтверждения и аудита.
@@ -143,18 +145,23 @@ Allowlist источников. Для каждого источника фик�
 
 ### Этап 0 — foundation
 - Этот репозиторий, agent skills, threat model, source registry, CI, secret scanning, Terraform skeleton.
+- Статус 2026-08-22: доменный пакет `@refund/domain`, миграции `db/migrations`, `npm run ci`, источник `aliexpress-ua` в `draft`. Коннекторов нет.
 
 ### Этап 1 — законный каталог
 - Один официально разрешённый API/фид, нормализатор, fixtures, source registry, продукты/наблюдения, dashboard ingestion runs.
+- Статус 2026-08-22: парсер `merchant-export@1.0.0` и `POST /v1/import-runs` для экспорта продавца. Marketplace HTTP-коннекторов нет.
 
 ### Этап 2 — кейсы без внешней отправки
 - Заказы, policy snapshots, eligibility, evidence store, case state machine, RBAC, audit.
+- Статус 2026-08-22: API покрывает §7; снимок кейсов/заказов в SQL; boot на PGlite; внешняя отправка только `manual_guidance_only` после approval. После submit оператор двигает `merchant_review`…`resolved` по проверяемому ответу продавца.
 
 ### Этап 3 — одобренная интеграция возврата
 - Один провайдер (например, собственный Shopify-магазин с правами merchant), approval gate, idempotency, webhook reconciliation и sandbox tests.
+- Статус 2026-08-22: порт сверки `POST /v1/provider-actions/{id}/reconcile` есть; HTTP-клиента Shopify/AliExpress нет.
 
 ### Этап 4 — hardening
 - Backups/restore drill, chaos test потери worker, SLO, retention jobs, DLP, pen-test, review legal/ToS по каждому источнику.
+- Статус 2026-08-22: transactional outbox, legal hold, erasure PII, structured logs, rate limit источника, object-store port. Живой Temporal/S3/OIDC — на стороне деплоя.
 
 ## 9. Критерии приёмки MVP
 
