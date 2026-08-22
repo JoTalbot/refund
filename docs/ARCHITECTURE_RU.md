@@ -153,7 +153,7 @@ Allowlist источников. Для каждого источника фик�
 
 ### Этап 2 — кейсы без внешней отправки
 - Заказы, policy snapshots, eligibility, evidence store, case state machine, RBAC, audit.
-- Статус 2026-08-22: in-memory API покрывает §7; внешняя отправка только `manual_guidance_only` после approval.
+- Статус 2026-08-22: API покрывает §7; снимок кейсов/заказов в SQL; boot на PGlite; внешняя отправка только `manual_guidance_only` после approval.
 
 ### Этап 3 — одобренная интеграция возврата
 - Один провайдер (например, собственный Shopify-магазин с правами merchant), approval gate, idempotency, webhook reconciliation и sandbox tests.

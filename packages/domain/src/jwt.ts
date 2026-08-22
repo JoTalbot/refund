@@ -1,4 +1,4 @@
-import { jwtVerify, type JWTPayload } from "jose";
+import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
 import { UnauthorizedError } from "./errors.js";
 import { actorFromOidcClaims, type OidcClaims } from "./oidc.js";
 import type { Actor } from "./types.js";
@@ -34,13 +34,37 @@ export async function actorFromAccessToken(
       token,
       async (header) => (await options.getKey(header)) as never,
       {
-      issuer: options.issuer,
-      audience: options.audience,
-      clockTolerance: options.clockToleranceSec ?? 5,
-    });
+        issuer: options.issuer,
+        audience: options.audience,
+        clockTolerance: options.clockToleranceSec ?? 5,
+      },
+    );
     return actorFromOidcClaims(claimsFromPayload(payload));
   } catch (error) {
     if (error instanceof UnauthorizedError) throw error;
     throw new UnauthorizedError(`access token rejected: ${(error as Error).message}`);
   }
+}
+
+export function remoteJwksVerifier(
+  issuer: string,
+  audience: string,
+  jwksUrl: string,
+): OidcVerifierOptions {
+  const jwks = createRemoteJWKSet(new URL(jwksUrl));
+  return {
+    issuer,
+    audience,
+    getKey: async (header) => jwks(header),
+  };
+}
+
+export function oidcFromEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): OidcVerifierOptions | undefined {
+  const issuer = env.OIDC_ISSUER_URL;
+  const audience = env.OIDC_AUDIENCE;
+  const jwksUrl = env.OIDC_JWKS_URL;
+  if (!issuer || !audience || !jwksUrl) return undefined;
+  return remoteJwksVerifier(issuer, audience, jwksUrl);
 }

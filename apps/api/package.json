@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@refund/domain": "0.1.0",
-    "@refund/persist": "0.1.0"
+    "@refund/persist": "0.1.0",
+    "@electric-sql/pglite": "^0.3.4"
   }
 }

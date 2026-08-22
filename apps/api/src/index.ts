@@ -1,16 +1,14 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { createHandler } from "./http.js";
-import { Platform } from "./platform.js";
+import { oidcFromEnv } from "@refund/domain";
+import { createHandler, type ApiRequest } from "./http.js";
+import { createRuntime } from "./runtime.js";
 import { readPublicFile } from "./static.js";
 
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? "0.0.0.0";
 const allowDevActor = process.env.NODE_ENV !== "production" || process.env.ALLOW_DEV_ACTOR === "1";
 
-const platform = new Platform();
-const handle = createHandler(platform, { allowDevActor });
-
-export function readRequest(request: IncomingMessage, bodyText: string) {
+export function readRequest(request: IncomingMessage, bodyText: string): ApiRequest {
   const hostHeader = request.headers.host ?? "localhost";
   const url = new URL(request.url ?? "/", `http://${hostHeader}`);
   const headers: Record<string, string> = {};
@@ -45,48 +43,66 @@ function applyCors(response: ServerResponse): void {
   response.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
 }
 
-const server = createServer((request: IncomingMessage, response: ServerResponse) => {
-  const chunks: Buffer[] = [];
-  request.on("data", (chunk: Buffer) => {
-    chunks.push(chunk);
-  });
-  request.on("end", () => {
-    void (async () => {
-    applyCors(response);
-    if (request.method === "OPTIONS") {
-      response.writeHead(204);
-      response.end();
-      return;
-    }
-    const hostHeader = request.headers.host ?? "localhost";
-    const url = new URL(request.url ?? "/", `http://${hostHeader}`);
-    if (request.method === "GET") {
-      const file = readPublicFile(url.pathname);
-      if (file) {
-        response.setHeader("content-type", file.type);
-        response.writeHead(200);
-        response.end(file.body);
-        return;
-      }
-    }
-    response.setHeader("content-type", "application/json; charset=utf-8");
-    try {
-      const parsed = readRequest(request, Buffer.concat(chunks).toString("utf8"));
-      const result = await handle(parsed);
-      response.writeHead(result.status);
-      response.end(JSON.stringify(result.body));
-    } catch (error) {
-      response.writeHead(400);
-      response.end(JSON.stringify({ error: "bad_request", message: (error as Error).message }));
-    }
-    })();
-  });
-});
-
-if (process.env.VITEST !== "true") {
-  server.listen(port, host, () => {
-    process.stdout.write(JSON.stringify({ msg: "listening", host, port }) + "\n");
+export function createHttpServer(handle: (request: ApiRequest) => Promise<{ status: number; body: unknown }>) {
+  return createServer((request: IncomingMessage, response: ServerResponse) => {
+    const chunks: Buffer[] = [];
+    request.on("data", (chunk: Buffer) => {
+      chunks.push(chunk);
+    });
+    request.on("end", () => {
+      void (async () => {
+        applyCors(response);
+        if (request.method === "OPTIONS") {
+          response.writeHead(204);
+          response.end();
+          return;
+        }
+        const hostHeader = request.headers.host ?? "localhost";
+        const url = new URL(request.url ?? "/", `http://${hostHeader}`);
+        if (request.method === "GET") {
+          const file = readPublicFile(url.pathname);
+          if (file) {
+            response.setHeader("content-type", file.type);
+            response.writeHead(200);
+            response.end(file.body);
+            return;
+          }
+        }
+        response.setHeader("content-type", "application/json; charset=utf-8");
+        try {
+          const parsed = readRequest(request, Buffer.concat(chunks).toString("utf8"));
+          const result = await handle(parsed);
+          response.writeHead(result.status);
+          response.end(JSON.stringify(result.body));
+        } catch (error) {
+          response.writeHead(400);
+          response.end(JSON.stringify({ error: "bad_request", message: (error as Error).message }));
+        }
+      })();
+    });
   });
 }
 
-export { server };
+export async function startServer() {
+  const runtime = await createRuntime();
+  const handle = createHandler(runtime.platform, {
+    allowDevActor,
+    store: runtime.store,
+    persistence: runtime.persistence,
+    oidc: oidcFromEnv(),
+  });
+  const httpServer = createHttpServer(handle);
+  await new Promise<void>((resolve) => {
+    httpServer.listen(port, host, () => {
+      process.stdout.write(
+        JSON.stringify({ msg: "listening", host, port, persistence: runtime.persistence }) + "\n",
+      );
+      resolve();
+    });
+  });
+  return httpServer;
+}
+
+if (process.env.VITEST !== "true") {
+  await startServer();
+}

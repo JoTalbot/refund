@@ -12,6 +12,7 @@ coverage/
 .turbo/
 .cache/
 tmp/
+.pglite/
 .secrets/
 *.pem
 *.key

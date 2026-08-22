@@ -54,8 +54,10 @@ npm run dev:api
 curl -s http://127.0.0.1:3000/health
 ```
 
+Старт поднимает PGlite, накатывает миграции и гидратирует снимок. OIDC: `OIDC_ISSUER_URL`, `OIDC_AUDIENCE`, `OIDC_JWKS_URL`.
+
 Миграции проверяются в CI через PGlite. Живой Postgres 16: `docker compose up -d`, затем `npx tsx scripts/apply-migrations.ts | psql postgres://refund@localhost:5432/refund`.
 
 ## Статус
 
-Этапы 0–2 в процессе: foundation + in-memory API MVP + eligibility + импорт JSON-экспорта продавца. Коннекторов маркетплейсов нет. `aliexpress-ua` остаётся `draft`. До разработки коннектора владелец магазина должен быть в allowlist и пройти юридико-техническую проверку.
+Этапы 0–2: foundation, API MVP, eligibility, экспорт продавца, SQL-снимок, boot, JWKS, durable import worker. Коннекторов маркетплейсов нет. `aliexpress-ua` остаётся `draft`.

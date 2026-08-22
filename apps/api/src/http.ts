@@ -62,11 +62,15 @@ async function route(
   const path = normalizePath(request.path);
 
   if (method === "GET" && path === "/health") {
-    return json(200, { ok: true, service: "refund-api" });
+    return json(200, {
+      ok: true,
+      service: "refund-api",
+      persistence: options.persistence ?? "memory",
+    });
   }
   if (method === "GET" && path === "/v1/meta") {
     return json(200, {
-      version: "0.4.0",
+      version: "0.5.0",
       providerConnectors: [],
       persistence: options.persistence ?? "memory",
       oidc: Boolean(options.oidc),

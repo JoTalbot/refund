@@ -11,12 +11,13 @@
 - Console + SQL trigger proof: `docs/iterations/2026-08-22-console-and-sql-triggers.md`.
 - OIDC JWT + SQL audit/jobs: `docs/iterations/2026-08-22-oidc-sql-audit-jobs.md`.
 - SQL snapshot of cases/orders: `docs/iterations/2026-08-22-sql-platform-snapshot.md`.
+- Boot + JWKS + durable import worker: `docs/iterations/2026-08-22-boot-jwks-worker.md`.
 - File ownership: `packages/domain/**`, `packages/persist/**`, `apps/api/**`, `db/**`, `fixtures/ingest/**`, `docs/**`.
 
 ## Not done
 
-- Dev API still starts in memory unless `SqlPlatformStore` is passed in.
-- No remote JWKS fetch / Temporal runtime.
+- Runtime still uses in-process PGlite, not managed Postgres DSN.
+- No Temporal Cloud/self-hosted runtime.
 - No Shopify connector.
 - No AliExpress Open Platform client (`aliexpress-ua` stays `draft`).
 

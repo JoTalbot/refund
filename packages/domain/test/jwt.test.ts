@@ -1,7 +1,7 @@
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
 import { UnauthorizedError } from "../src/errors.js";
-import { actorFromAccessToken } from "../src/jwt.js";
+import { actorFromAccessToken, oidcFromEnv, remoteJwksVerifier } from "../src/jwt.js";
 
 const ISSUER = "https://auth.example.invalid/";
 const AUDIENCE = "refund-api";
@@ -61,5 +61,43 @@ describe("OIDC access token", () => {
 
     const badRole = await sign({ sub: "a", tenant_id: TENANT, role: "root" });
     await expect(actorFromAccessToken(badRole.token, badRole.options)).rejects.toThrow(/unknown role/);
+  });
+
+  it("verifies a token against a remote JWKS document", async () => {
+    const { publicKey, privateKey } = await generateKeyPair("RS256", { extractable: true });
+    const jwk = await exportJWK(publicKey);
+    jwk.kid = "remote-1";
+    jwk.alg = "RS256";
+    jwk.use = "sig";
+    const token = await new SignJWT({ tenant_id: TENANT, role: "auditor" })
+      .setProtectedHeader({ alg: "RS256", kid: "remote-1" })
+      .setIssuer(ISSUER)
+      .setAudience(AUDIENCE)
+      .setSubject("auditor-1")
+      .setExpirationTime("10m")
+      .sign(privateKey);
+    const previous = globalThis.fetch;
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({ keys: [jwk] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    try {
+      const actor = await actorFromAccessToken(
+        token,
+        remoteJwksVerifier(ISSUER, AUDIENCE, "https://auth.example.invalid/jwks"),
+      );
+      expect(actor).toMatchObject({ id: "auditor-1", role: "auditor" });
+    } finally {
+      globalThis.fetch = previous;
+    }
+    expect(oidcFromEnv({})).toBeUndefined();
+    expect(
+      oidcFromEnv({
+        OIDC_ISSUER_URL: ISSUER,
+        OIDC_AUDIENCE: AUDIENCE,
+        OIDC_JWKS_URL: "https://auth.example.invalid/jwks",
+      }),
+    ).toMatchObject({ issuer: ISSUER, audience: AUDIENCE });
   });
 });
