@@ -1,0 +1,12 @@
+name: Feature or operational task
+description: Durable, scoped work item for an agent or engineer
+body:
+  - type: textarea
+    attributes: { label: Goal, description: What outcome is needed? }
+    validations: { required: true }
+  - type: textarea
+    attributes: { label: File ownership, description: Files/directories this task owns. }
+  - type: textarea
+    attributes: { label: Durable state and recovery, description: What persists outside the environment? How does a worker resume? }
+  - type: textarea
+    attributes: { label: Security and compliance, description: Permissions, PII, source policy, and approval impact. }

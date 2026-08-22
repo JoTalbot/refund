@@ -1,0 +1,17 @@
+{
+  "name": "@refund/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run build && node --test dist/test/*.test.js",
+    "start": "node dist/src/server.js"
+  },
+  "dependencies": {
+    "@refund/domain": "*",
+    "fastify": "^5.3.2"
+  }
+}

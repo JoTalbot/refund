@@ -1,0 +1,20 @@
+{
+  "name": "refund-operations-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Compliant returns operations platform",
+  "packageManager": "npm@10.8.2",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "build": "npm run build -w @refund/domain && npm run build -w @refund/api && npm run build -w @refund/worker",
+    "typecheck": "npm run typecheck -w @refund/domain && npm run typecheck -w @refund/api && npm run typecheck -w @refund/worker",
+    "test": "npm run test -w @refund/domain && npm run test -w @refund/api",
+    "lint": "npm run lint -w @refund/domain && npm run lint -w @refund/api && npm run lint -w @refund/worker",
+    "secret:scan": "node scripts/secret-scan.mjs",
+    "ci": "npm run secret:scan && npm run lint && npm run typecheck && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.30",
+    "typescript": "^5.8.3"
+  }
+}
