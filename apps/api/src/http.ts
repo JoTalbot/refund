@@ -5,6 +5,7 @@ import {
   type Actor,
   type OidcVerifierOptions,
 } from "@refund/domain";
+import type { SqlPlatformStore } from "@refund/persist";
 import type { Platform } from "./platform.js";
 
 export interface ApiRequest {
@@ -24,11 +25,20 @@ const UUID = "[0-9a-fA-F-]{36}";
 
 export function createHandler(
   platform: Platform,
-  options: { allowDevActor: boolean; oidc?: OidcVerifierOptions; persistence?: string },
+  options: {
+    allowDevActor: boolean;
+    oidc?: OidcVerifierOptions;
+    persistence?: string;
+    store?: SqlPlatformStore;
+  },
 ) {
   return async function handle(request: ApiRequest): Promise<ApiResponse> {
     try {
-      return await route(platform, request, options);
+      const result = await route(platform, request, options);
+      if (options.store && request.method.toUpperCase() === "POST" && result.status < 400) {
+        await options.store.saveSnapshot(platform.exportSnapshot());
+      }
+      return result;
     } catch (error) {
       if (error instanceof UnauthorizedError) {
         return json(401, { error: error.code, message: error.message });

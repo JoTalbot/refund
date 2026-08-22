@@ -17,6 +17,7 @@ const required = [
   "CREATE TABLE provider_actions",
   "CREATE TABLE import_runs",
   "CREATE TABLE job_leases",
+  "CREATE TABLE order_lines",
   "idempotency_key",
   "forbid_audit_mutation",
   "audit_events_enforce_chain",

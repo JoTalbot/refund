@@ -7,6 +7,7 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@refund/domain": "0.1.0"
+    "@refund/domain": "0.1.0",
+    "@refund/persist": "0.1.0"
   }
 }

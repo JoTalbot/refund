@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { PlatformSnapshot } from "@refund/persist";
 import {
   ALIEXPRESS_UA_SOURCE,
   DomainError,
@@ -56,10 +57,78 @@ export class Platform {
   private readonly importKeys = new IdempotencyStore<ImportRun>();
   private readonly orderKeys = new IdempotencyStore<OrderRecord>();
   private readonly submitKeys = new IdempotencyStore<ProviderAction>();
+  private readonly seenActors = new Map<string, Actor>();
 
   constructor() {
     this.sources.set(ALIEXPRESS_UA_SOURCE.id, { ...ALIEXPRESS_UA_SOURCE });
     this.sources.set(ALIEXPRESS_UA_SOURCE.slug, { ...ALIEXPRESS_UA_SOURCE });
+  }
+
+  static fromSnapshot(snapshot: PlatformSnapshot): Platform {
+    const platform = new Platform();
+    platform.importSnapshot(snapshot);
+    return platform;
+  }
+
+  exportSnapshot(): PlatformSnapshot {
+    return {
+      actors: [...this.seenActors.values()],
+      sources: this.uniqueSources(),
+      products: [...this.products.values()],
+      observations: [...this.observations],
+      policies: [...this.policies.values()],
+      orders: [...this.orders.values()],
+      cases: [...this.cases.values()],
+      approvals: [...this.approvals.values()],
+      actions: [...this.actions.values()],
+      evidence: [...this.evidence],
+      imports: [...this.imports.values()],
+      audit: [...this.auditStore.events],
+    };
+  }
+
+  importSnapshot(snapshot: PlatformSnapshot): void {
+    this.sources.clear();
+    this.products.clear();
+    this.observations.splice(0, this.observations.length);
+    this.policies.clear();
+    this.orders.clear();
+    this.cases.clear();
+    this.approvals.clear();
+    this.actions.clear();
+    this.evidence.splice(0, this.evidence.length);
+    this.imports.clear();
+    this.seenActors.clear();
+    this.auditStore.events.splice(0, this.auditStore.events.length);
+
+    for (const source of snapshot.sources) this.putSource(source);
+    if (!this.sources.has(ALIEXPRESS_UA_SOURCE.slug)) {
+      this.putSource({ ...ALIEXPRESS_UA_SOURCE });
+    }
+    for (const product of snapshot.products) {
+      this.products.set(`${product.sourceId}:${product.sourceProductId}`, product);
+    }
+    this.observations.push(...snapshot.observations);
+    for (const policy of snapshot.policies) this.policies.set(policy.id, policy);
+    for (const order of snapshot.orders) {
+      this.orders.set(order.id, order);
+      this.orderKeys.remember(order.tenantId, `hydrated-order-${order.id}`, order);
+    }
+    for (const item of snapshot.cases) this.cases.set(item.id, item);
+    for (const item of snapshot.approvals) this.approvals.set(item.id, item);
+    for (const item of snapshot.actions) {
+      this.actions.set(item.id, item);
+      this.submitKeys.remember(item.tenantId, item.idempotencyKey, item);
+    }
+    this.evidence.push(...snapshot.evidence);
+    for (const item of snapshot.imports) {
+      this.imports.set(item.id, item);
+      this.importKeys.remember(item.tenantId, item.idempotencyKey, item);
+    }
+    for (const actor of snapshot.actors) {
+      this.seenActors.set(`${actor.tenantId}:${actor.id}`, actor);
+    }
+    this.auditStore.events.push(...snapshot.audit);
   }
 
   private record(

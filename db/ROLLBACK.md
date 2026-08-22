@@ -2,6 +2,17 @@
 
 Целевая СУБД: PostgreSQL 16+. Миграции применяются в транзакции. План восстановления не удаляет WORM-копию аудита вне БД.
 
+## 0004_order_lines_and_policy.sql
+
+```sql
+BEGIN;
+ALTER TABLE policy_snapshots ALTER COLUMN source_id SET NOT NULL;
+DROP TABLE IF EXISTS order_lines;
+COMMIT;
+```
+
+`SET NOT NULL` пройдёт только если нет снимков с пустым `source_id`.
+
 ## 0003_jobs_and_import_runs.sql
 
 ```sql
