@@ -96,6 +96,7 @@
   <nav>
     <button type="button" data-tab="work" aria-current="page">Консоль кейса</button>
     <button type="button" data-tab="guide">AliExpress UA</button>
+    <button type="button" data-tab="shopify">Shopify draft</button>
   </nav>
   <main>
     <div id="work">
@@ -105,6 +106,8 @@
         <p class="note">В production эти заголовки выключены. Approver ходит со step-up.</p>
         <div class="actions">
           <button type="button" id="refresh">Обновить списки</button>
+          <button type="button" id="ready">GET /ready</button>
+          <button type="button" id="run-all">Прогнать весь сценарий</button>
         </div>
       </section>
       <section>
@@ -134,6 +137,17 @@
           <button type="button" id="submit-bad">Submit AliExpress — должен быть отказ</button>
           <button type="button" id="submit-ok">Submit manual_guidance_only</button>
         </div>
+      </section>
+    </div>
+    <div id="shopify" hidden>
+      <section>
+        <h2>Shopify своего магазина — только draft</h2>
+        <p class="note">Коннектора Admin API в репозитории нет. Источник <code>shopify-merchant</code> остаётся draft, пока нет OAuth и approve.</p>
+        <ul class="guide">
+          <li>Планируемые scopes: <code>read_orders</code>, <code>write_returns</code>, <code>read_returns</code>, <code>read_products</code>.</li>
+          <li>Токен — только secret manager, не Git.</li>
+          <li>Документация: shopify.dev returns apps.</li>
+        </ul>
       </section>
     </div>
     <div id="guide" hidden>
@@ -201,6 +215,7 @@
         button.setAttribute("aria-current", "page");
         document.getElementById("work").hidden = button.dataset.tab !== "work";
         document.getElementById("guide").hidden = button.dataset.tab !== "guide";
+        document.getElementById("shopify").hidden = button.dataset.tab !== "shopify";
       });
     });
 
@@ -309,13 +324,13 @@
     };
     document.getElementById("elig").onclick = () => {
       setRole("customer");
-      api("POST", "/v1/return-cases/" + state.caseId + "/eligibility", {
+      return api("POST", "/v1/return-cases/" + state.caseId + "/eligibility", {
         region: "UA", condition: "not_as_described", days_since_delivery: 2, category: "home", delivered: true
       });
     };
     document.getElementById("evidence").onclick = () => {
       setRole("customer");
-      api("POST", "/v1/return-cases/" + state.caseId + "/evidence", {
+      return api("POST", "/v1/return-cases/" + state.caseId + "/evidence", {
         object_uri: "s3://example-refund-artifacts/demo/unbox.mp4",
         checksum: "a".repeat(64),
         classification: "unboxing_video"
@@ -323,7 +338,7 @@
     };
     document.getElementById("attest").onclick = () => {
       setRole("customer");
-      api("POST", "/v1/return-cases/" + state.caseId + "/attestations", {});
+      return api("POST", "/v1/return-cases/" + state.caseId + "/attestations", {});
     };
     document.getElementById("ask").onclick = async () => {
       setRole("customer");
@@ -335,7 +350,7 @@
     };
     document.getElementById("decide").onclick = () => {
       setRole("approver");
-      api("POST", "/v1/return-cases/" + state.caseId + "/approval-requests/" + state.approvalId + "/decision", {
+      return api("POST", "/v1/return-cases/" + state.caseId + "/approval-requests/" + state.approvalId + "/decision", {
         decision: "approved",
         reason: "Заказ принадлежит заявителю, доказательства на месте"
       });
@@ -350,7 +365,7 @@
     };
     document.getElementById("submit-ok").onclick = () => {
       setRole("approver");
-      api("POST", "/v1/return-cases/" + state.caseId + "/submit", {
+      return api("POST", "/v1/return-cases/" + state.caseId + "/submit", {
         idempotency_key: "sub-ok-" + Date.now(),
         provider: "manual",
         action_type: "manual_guidance_only"

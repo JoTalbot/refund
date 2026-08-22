@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { PlatformSnapshot } from "@refund/persist";
 import {
   ALIEXPRESS_UA_SOURCE,
+  SHOPIFY_MERCHANT_SOURCE,
   DomainError,
   IdempotencyStore,
   InMemoryAuditAppender,
@@ -62,6 +63,8 @@ export class Platform {
   constructor() {
     this.sources.set(ALIEXPRESS_UA_SOURCE.id, { ...ALIEXPRESS_UA_SOURCE });
     this.sources.set(ALIEXPRESS_UA_SOURCE.slug, { ...ALIEXPRESS_UA_SOURCE });
+    this.sources.set(SHOPIFY_MERCHANT_SOURCE.id, { ...SHOPIFY_MERCHANT_SOURCE });
+    this.sources.set(SHOPIFY_MERCHANT_SOURCE.slug, { ...SHOPIFY_MERCHANT_SOURCE });
   }
 
   static fromSnapshot(snapshot: PlatformSnapshot): Platform {
@@ -104,6 +107,9 @@ export class Platform {
     for (const source of snapshot.sources) this.putSource(source);
     if (!this.sources.has(ALIEXPRESS_UA_SOURCE.slug)) {
       this.putSource({ ...ALIEXPRESS_UA_SOURCE });
+    }
+    if (!this.sources.has(SHOPIFY_MERCHANT_SOURCE.slug)) {
+      this.putSource({ ...SHOPIFY_MERCHANT_SOURCE });
     }
     for (const product of snapshot.products) {
       this.products.set(`${product.sourceId}:${product.sourceProductId}`, product);

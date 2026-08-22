@@ -44,7 +44,9 @@ npm run ci
 
 Секреты не коммитить. Локальные значения — secret manager или незакоммиченный `.env` из `.env.example`.
 
-Гайд покупателя AliExpress (UA, только ручной сценарий): [`docs/providers/ALIEXPRESS_UA_BUYER_GUIDE_RU.md`](docs/providers/ALIEXPRESS_UA_BUYER_GUIDE_RU.md). Источник `aliexpress-ua` остаётся `draft`.
+Гайд покупателя AliExpress (UA, только ручной сценарий): [`docs/providers/ALIEXPRESS_UA_BUYER_GUIDE_RU.md`](docs/providers/ALIEXPRESS_UA_BUYER_GUIDE_RU.md). Источник `aliexpress-ua` остаётся `draft`. Shopify своего магазина: [`docs/sources/shopify-merchant.md`](docs/sources/shopify-merchant.md) (`draft`, без Admin API client).
+
+Выкладка: [`docs/RUNBOOK_DEPLOY_RU.md`](docs/RUNBOOK_DEPLOY_RU.md).
 
 Локальный API и консоль (заголовки актора только вне `production`):
 

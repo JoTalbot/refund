@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ForbiddenError } from "../src/errors.js";
 import {
   ALIEXPRESS_UA_SOURCE,
+  SHOPIFY_MERCHANT_SOURCE,
   assertImportAllowed,
   canStartImport,
   transitionSource,
@@ -14,6 +15,13 @@ describe("source registry", () => {
     expect(ALIEXPRESS_UA_SOURCE.rateLimitPerMinute).toBe(0);
     expect(canStartImport(ALIEXPRESS_UA_SOURCE)).toBe(false);
     expect(() => assertImportAllowed(ALIEXPRESS_UA_SOURCE)).toThrow(ForbiddenError);
+  });
+
+  it("keeps Shopify merchant integration in draft without a connector", () => {
+    expect(SHOPIFY_MERCHANT_SOURCE.status).toBe("draft");
+    expect(SHOPIFY_MERCHANT_SOURCE.rateLimitPerMinute).toBe(0);
+    expect(canStartImport(SHOPIFY_MERCHANT_SOURCE)).toBe(false);
+    expect(SHOPIFY_MERCHANT_SOURCE.permissionBasis.toLowerCase()).toContain("oauth");
   });
 
   it("allows only compliance_admin to approve", () => {

@@ -35,6 +35,7 @@ Shopify документирует приложения для управлен�
 | slug | status | Комментарий |
 |---|---|---|
 | aliexpress-ua | draft | Только ручной гайд покупателя в Украине. См. `docs/sources/aliexpress-ua.md`. Импорт и Open Platform запрещены. |
+| shopify-merchant | draft | Свой магазин, Admin GraphQL после OAuth. Клиента API нет. `docs/sources/shopify-merchant.md`. |
 
 ## Рекомендованный выбор для MVP
 

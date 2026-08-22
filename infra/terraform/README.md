@@ -10,4 +10,10 @@ Creates:
 
 State belongs in a remote backend, not in this repository.
 
+Also creates a GitHub Actions OIDC role (`github_oidc.tf`) that may read only the database secret id prefix and write artifact/audit buckets.
+
+Apply from CI with short-lived OIDC, not from an agent laptop.
+
 Rollback: `terraform destroy` only on disposable `dev`. Production uses PITR + bucket versioning, not destroy.
+
+Runbook: [`docs/RUNBOOK_DEPLOY_RU.md`](../../docs/RUNBOOK_DEPLOY_RU.md).

@@ -2,6 +2,14 @@
 
 Целевая СУБД: PostgreSQL 16+. Миграции применяются в транзакции. План восстановления не удаляет WORM-копию аудита вне БД.
 
+## 0005_shopify_draft.sql
+
+```sql
+BEGIN;
+DELETE FROM sources WHERE id = '33333333-3333-4333-8333-333333333333';
+COMMIT;
+```
+
 ## 0004_order_lines_and_policy.sql
 
 ```sql

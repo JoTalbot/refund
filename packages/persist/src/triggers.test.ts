@@ -36,6 +36,7 @@ describe("postgres migrations and constraints", () => {
       "0002_audit_append_only.sql",
       "0003_jobs_and_import_runs.sql",
       "0004_order_lines_and_policy.sql",
+      "0005_shopify_draft.sql",
     ]);
     const sources = await db.query<{ slug: string; status: string }>(
       "SELECT slug, status FROM sources WHERE slug = 'aliexpress-ua'",

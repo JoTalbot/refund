@@ -2,6 +2,7 @@ import {
   UnauthorizedError,
   actorFromAccessToken,
   actorFromDevHeaders,
+  hasPermission,
   type Actor,
   type OidcVerifierOptions,
 } from "@refund/domain";
@@ -75,6 +76,15 @@ async function route(
       persistence: options.persistence ?? "memory",
     });
   }
+  if (method === "GET" && path === "/ready") {
+    return json(200, {
+      ready: true,
+      service: "refund-api",
+      persistence: options.persistence ?? "memory",
+      jobs: Boolean(options.jobs),
+      oidc: Boolean(options.oidc),
+    });
+  }
   if (method === "GET" && path === "/v1/meta") {
     return json(200, {
       version: "0.5.0",
@@ -89,6 +99,16 @@ async function route(
 
   if (method === "GET" && path === "/v1/me") {
     return json(200, actor);
+  }
+
+  if (method === "GET" && path === "/v1/jobs") {
+    if (!options.jobs) {
+      return json(503, { error: "jobs_unavailable", message: "job runtime is not bound" });
+    }
+    if (!hasPermission(actor, "import:start") && !hasPermission(actor, "audit:read")) {
+      return json(403, { error: "forbidden", message: "role cannot list jobs" });
+    }
+    return json(200, { items: await options.jobs.list() });
   }
 
   if (method === "POST" && path === "/v1/jobs/import") {

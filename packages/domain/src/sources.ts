@@ -60,3 +60,19 @@ export const ALIEXPRESS_UA_SOURCE: SourceRecord = {
   regionNotes:
     "Ukraine buyer self-serve guidance. Free Return / local warehouse is often unavailable.",
 };
+
+export const SHOPIFY_MERCHANT_SOURCE: SourceRecord = {
+  id: "33333333-3333-4333-8333-333333333333",
+  slug: "shopify-merchant",
+  owner: "platform-compliance",
+  baseUrl: "https://shopify.dev/docs/api/admin-graphql",
+  permissionBasis:
+    "Own-store Admin GraphQL only after merchant OAuth, least-privilege scopes, and Source Registry approved.",
+  policyUrl: "https://shopify.dev/docs/apps/build/orders-fulfillment/returns-apps",
+  status: "draft",
+  rateLimitPerMinute: 0,
+  allowedFields: ["shop_domain", "return_policy_url", "scopes"],
+  retentionDays: 365,
+  regionNotes:
+    "Sandbox/draft. No Admin API client in this repository until status is approved.",
+};

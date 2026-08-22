@@ -159,6 +159,9 @@ describe("API MVP", () => {
     expect((await handle({ method: "GET", path: "/health", headers: {}, query: {}, body: null })).body).toMatchObject({
       ok: true,
     });
+    expect((await handle({ method: "GET", path: "/ready", headers: {}, query: {}, body: null })).body).toMatchObject({
+      ready: true,
+    });
     expect(
       (
         await merchant("POST", "/v1/jobs/import", {

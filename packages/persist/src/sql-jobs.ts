@@ -71,4 +71,23 @@ export class SqlJobStore {
     await this.save(lease);
     return lease;
   }
+
+  async list(limit = 50): Promise<JobLease[]> {
+    const result = await this.db.query<Record<string, unknown>>(
+      `SELECT run_id, job_type, owner_id, expires_at, checkpoint_uri, payload, version
+         FROM job_leases
+        ORDER BY expires_at DESC
+        LIMIT $1`,
+      [limit],
+    );
+    return result.rows.map((row) => ({
+      runId: String(row.run_id),
+      jobType: String(row.job_type),
+      ownerId: String(row.owner_id),
+      expiresAt: new Date(String(row.expires_at)).toISOString(),
+      checkpointUri: row.checkpoint_uri ? String(row.checkpoint_uri) : null,
+      payload: (row.payload as Record<string, unknown>) ?? {},
+      version: Number(row.version),
+    }));
+  }
 }

@@ -13,7 +13,8 @@
 - SQL snapshot of cases/orders: `docs/iterations/2026-08-22-sql-platform-snapshot.md`.
 - Boot + JWKS + durable import worker: `docs/iterations/2026-08-22-boot-jwks-worker.md`.
 - Postgres secret id + Temporal port: `docs/iterations/2026-08-22-postgres-secret-temporal-port.md`.
-- File ownership: `packages/domain/**`, `packages/persist/**`, `apps/api/**`, `apps/worker/**`, `db/**`, `docs/**`.
+- Runbook, ready/jobs, console, Shopify draft: `docs/iterations/2026-08-22-prod-console-shopify-draft.md`.
+- File ownership: `packages/domain/**`, `packages/persist/**`, `apps/api/**`, `apps/worker/**`, `db/**`, `docs/**`, `infra/terraform/**`.
 
 ## Not done
 

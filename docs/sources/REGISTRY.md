@@ -6,5 +6,6 @@
 |---|---|---|---|
 | aliexpress-ua | draft | Official public legal/help pages; buyer self-serve only | none |
 | merchant-self-export | created per tenant as `draft` | Shop-owner JSON export | parser only |
+| shopify-merchant | draft | Own-store Admin GraphQL after OAuth | none |
 
-Детали: [`aliexpress-ua.md`](aliexpress-ua.md).
+Детали: [`aliexpress-ua.md`](aliexpress-ua.md), [`shopify-merchant.md`](shopify-merchant.md).

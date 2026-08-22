@@ -24,6 +24,7 @@ const required = [
   "provider_actions_require_approval",
   "'draft'",
   "aliexpress-ua",
+  "shopify-merchant",
 ];
 
 const combined = files.map((name) => readFileSync(join(dir, name), "utf8")).join("\n");

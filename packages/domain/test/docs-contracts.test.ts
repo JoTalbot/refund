@@ -41,4 +41,11 @@ describe("documentation contracts", () => {
     expect(research).toContain("https://openservice.aliexpress.com/");
     expect(research.toLowerCase()).toContain("ukraine");
   });
+
+  it("keeps Shopify as a draft own-store source", () => {
+    const source = read("docs/sources/shopify-merchant.md");
+    expect(source).toMatch(/status:\s*draft/i);
+    expect(source.toLowerCase()).toContain("connector: none");
+    expect(source).toContain("https://shopify.dev/docs/apps/build/orders-fulfillment/returns-apps");
+  });
 });
