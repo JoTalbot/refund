@@ -3,7 +3,7 @@
 ## Current phase
 
 - Phase: PR #4 review remediation
-- Current step: Both P1 comments are addressed, committed, and pushed; PR #4 is updated.
+- Current step: Both P1 comments are addressed, committed, pushed, and resolved in PR #4.
 
 ## Active agents
 
@@ -16,6 +16,7 @@
 - Fetched remote repository state and published the corrected UASEP audit as PR #4.
 - Added non-secret `origin` bootstrap/verification to the UASEP continuation procedure.
 - Added the reusable `remote-ref-audit` skill with inputs, steps, examples and limitations.
+- Resolved the two addressed PR #4 review threads.
 
 ## Research
 
