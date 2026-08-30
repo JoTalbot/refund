@@ -18,9 +18,9 @@
 4. Before merging PR #3, install/verify required GitHub Actions, perform normal code review, and verify the protected-branch policy.
 5. Bind production services only with CI workload identity and secret-manager references; never add DSNs, OAuth tokens, cookies, payment data or PII to Git.
 
-## Known delivery limitation
+## Delivery record
 
-The public remote is readable, but GitHub CLI authentication is unavailable in this environment. The changes are committed locally; pushing a branch and creating this corrective PR require an authorized GitHub App/OIDC workflow or authenticated GitHub CLI.
+The corrected checkpoint is published as [PR #4](https://github.com/JoTalbot/refund/pull/4) from `codex/uasep-remote-audit`. No credential or runtime secret was written to the repository.
 
 ## Next highest-value task
 

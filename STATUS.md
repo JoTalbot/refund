@@ -1,7 +1,7 @@
 # Shared Agent Status
 
 ## Current step
-- Corrected UASEP architecture audit against the current remote repository; validation passed and the correction is committed. PR publication is blocked by unavailable GitHub CLI authentication.
+- Corrected UASEP architecture audit against the current remote repository; validation passed, changes are committed, and PR #4 is open.
 
 ## Active agent
 - `/root` owns `.uasep/state/*`, `STATUS.md`, `.agents/STATUS.md`, and `research/2026-08-30-uasep-architecture-audit.md` for this correction.
@@ -18,7 +18,7 @@
 - Public GitHub API returned no inline or issue comments on PR #3. `npm ci && npm run ci` passed in an isolated checkout at `d85510a`.
 
 ## Blockers
-- GitHub CLI authentication is unavailable for publishing this corrective branch and PR.
+- None. PR #4 is open from `codex/uasep-remote-audit`; no credential was written to tracked files.
 
 ## Next step
-- Authenticate GitHub CLI or use an authorized GitHub App/OIDC workflow to publish this corrective PR; then review/merge PR #3 with required CI enabled before production service binding or any provider connector work.
+- Review PR #4, then review/merge PR #3 with required CI enabled before production service binding or any provider connector work.

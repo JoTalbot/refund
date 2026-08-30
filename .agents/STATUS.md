@@ -3,13 +3,13 @@
 ## Current phase
 
 - Phase: corrected UASEP remote-state audit
-- Current step: Remote audit complete and committed; PR delivery is blocked by unavailable GitHub CLI authentication.
+- Current step: Remote audit complete, committed, and published as PR #4.
 
 ## Active agents
 
 | Agent | Task | Branch | Status |
 |---|---|---|---|
-| `/root` | Correct UASEP state from current GitHub repository state | `work` | audit complete; committed; delivery blocked |
+| `/root` | Correct UASEP state from current GitHub repository state | `work` | audit complete; PR #4 open |
 
 ## Completed
 
@@ -28,7 +28,7 @@
 
 ## Next actions
 
-- Authenticate GitHub CLI or use an authorized GitHub App/OIDC workflow to publish the corrective PR.
+- Review PR #4, then enable PR #3 required CI and complete protected-branch review.
 - Enable PR #3's required GitHub Actions workflow and complete protected-branch review.
 - Bind production services only through workload identity and secret-manager references; retain source/provider gates.
 
