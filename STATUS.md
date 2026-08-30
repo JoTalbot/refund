@@ -1,7 +1,7 @@
 # Shared Agent Status
 
 ## Current step
-- PR #4 review remediation is complete: the handoff now bootstraps `origin` safely and the reusable remote-ref-audit skill is present. Validation, commit, push, and PR update follow.
+- PR #4 review remediation is complete, committed, and pushed to `codex/uasep-remote-audit`; PR #4 is updated.
 
 ## Active agent
 - `/root` owns `.agents/skills/remote-ref-audit/SKILL.md`, `.uasep/state/*`, `STATUS.md`, `.agents/STATUS.md`, and `research/2026-08-30-uasep-architecture-audit.md` for this review round.
@@ -25,4 +25,4 @@
 - None.
 
 ## Next step
-- Push the review fixes to PR #4; review/merge PR #4, then activate CI and review/merge PR #3 through the protected branch.
+- Review/merge PR #4, then activate CI and review/merge PR #3 through the protected branch.

@@ -3,13 +3,13 @@
 ## Current phase
 
 - Phase: PR #4 review remediation
-- Current step: Both P1 comments are addressed; validation, commit, push, and PR update follow.
+- Current step: Both P1 comments are addressed, committed, and pushed; PR #4 is updated.
 
 ## Active agents
 
 | Agent | Task | Branch | Status |
 |---|---|---|---|
-| `/root` | PR #4 review remediation | `work` | fixes complete; delivery pending |
+| `/root` | PR #4 review remediation | `work` | fixes complete; PR updated |
 
 ## Completed
 
@@ -26,7 +26,6 @@
 
 ## Next actions
 
-- Validate, commit, and push the PR #4 review fixes.
 - Review PR #4, then enable PR #3 required CI and complete protected-branch review.
 
 ## Rules
