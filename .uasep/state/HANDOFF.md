@@ -12,11 +12,12 @@
 
 ## Continuation procedure
 
-1. Read `AGENTS.md`, `STATUS.md`, `.agents/STATUS.md`, and this directory; then fetch `origin` before making architecture claims.
-2. Identify the exact ref under review and distinguish it from `main`, deployment state, and runtime bindings.
-3. For return work, apply `return-case-management`; for source work, apply `compliant-product-ingestion`. Preserve human approval, idempotency and append-only audit requirements.
-4. Before merging PR #3, install/verify required GitHub Actions, perform normal code review, and verify the protected-branch policy.
-5. Bind production services only with CI workload identity and secret-manager references; never add DSNs, OAuth tokens, cookies, payment data or PII to Git.
+1. Read `AGENTS.md`, `STATUS.md`, `.agents/STATUS.md`, this directory, and `.agents/skills/remote-ref-audit/SKILL.md`.
+2. Bootstrap the audit remote before fetching: if `origin` is absent, run `git remote add origin https://github.com/JoTalbot/refund.git`; otherwise verify `git remote get-url origin` targets this repository. Then run `git fetch --prune origin '+refs/heads/*:refs/remotes/origin/*'`. Do not add credentials to the URL or Git config.
+3. Identify the exact ref under review and distinguish it from `main`, deployment state, and runtime bindings.
+4. For return work, apply `return-case-management`; for source work, apply `compliant-product-ingestion`. Preserve human approval, idempotency and append-only audit requirements.
+5. Before merging PR #3, install/verify required GitHub Actions, perform normal code review, and verify the protected-branch policy.
+6. Bind production services only with CI workload identity and secret-manager references; never add DSNs, OAuth tokens, cookies, payment data or PII to Git.
 
 ## Delivery record
 

@@ -2,35 +2,32 @@
 
 ## Current phase
 
-- Phase: corrected UASEP remote-state audit
-- Current step: Remote audit complete, committed, and published as PR #4.
+- Phase: PR #4 review remediation
+- Current step: Both P1 comments are addressed; validation, commit, push, and PR update follow.
 
 ## Active agents
 
 | Agent | Task | Branch | Status |
 |---|---|---|---|
-| `/root` | Correct UASEP state from current GitHub repository state | `work` | audit complete; PR #4 open |
+| `/root` | PR #4 review remediation | `work` | fixes complete; delivery pending |
 
 ## Completed
 
-- Fetched all remote refs for `JoTalbot/refund`.
-- Audited PR #3 (`arena/01a028f5-refund`, `d85510a`) and found no public inline/issue comments.
-- Ran `npm ci && npm run ci` successfully in an isolated PR #3 worktree.
-- Corrected durable UASEP state to distinguish `main`, the unmerged PR, and production.
+- Fetched remote repository state and published the corrected UASEP audit as PR #4.
+- Added non-secret `origin` bootstrap/verification to the UASEP continuation procedure.
+- Added the reusable `remote-ref-audit` skill with inputs, steps, examples and limitations.
 
 ## Research
 
 | Topic | Result |
 |---|---|
-| `origin/main` | Documentation-focused Stage 0 baseline at `2060cd0`. |
-| PR #3 | Unmerged Stage 0–2 implementation candidate with TypeScript packages, API/worker, migrations, tests, Terraform skeleton, runbook and safety controls. |
-| Runtime/deployment | Managed Postgres, Temporal, object storage and production identity are intentionally unbound; no marketplace connector is present. |
+| Ephemeral checkout bootstrap | `origin` cannot be assumed; the handoff now adds or verifies the approved non-secret GitHub URL before `git fetch origin`. |
+| Reusable remote audit | `.agents/skills/remote-ref-audit/SKILL.md` captures ref inputs, remote refresh, evidence boundaries, validation, examples and constraints. |
 
 ## Next actions
 
+- Validate, commit, and push the PR #4 review fixes.
 - Review PR #4, then enable PR #3 required CI and complete protected-branch review.
-- Enable PR #3's required GitHub Actions workflow and complete protected-branch review.
-- Bind production services only through workload identity and secret-manager references; retain source/provider gates.
 
 ## Rules
 

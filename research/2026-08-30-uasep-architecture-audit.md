@@ -19,4 +19,4 @@ PR #3 has no public inline or issue comments at the time of review. In an isolat
 
 ## Selected approach
 
-The durable state now treats Git refs as first-class evidence: each conclusion names whether it applies to `main`, an open PR, or production. This prevents a future ephemeral agent from making the same stale-local-checkout error.
+The durable state now treats Git refs as first-class evidence: each conclusion names whether it applies to `main`, an open PR, or production. The reusable `.agents/skills/remote-ref-audit/SKILL.md` now also requires bootstrapping or verifying `origin` before fetch, so a fresh checkout can reproduce the audit safely.

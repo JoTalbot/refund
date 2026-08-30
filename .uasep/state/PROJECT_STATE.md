@@ -57,3 +57,4 @@ The previous checkpoint incorrectly audited only the local branch and described 
 - Read root instructions, shared status, applicable `agent-continuity`, `research`, and `testing` skills, local architecture/source documents, and the open remote PR.
 - Fetched all remote branches, inspected the PR diff and its architecture, threat-model, runbook, handoff and package scripts.
 - Public UASEP-format lookup remains unavailable (HTTP 401), so the requested Markdown files remain the repository-compatible state contract.
+- Extracted the successful ref-aware remote-audit process into `.agents/skills/remote-ref-audit/SKILL.md`; its bootstrap step makes no assumption that `origin` exists in a fresh checkout.
