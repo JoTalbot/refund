@@ -17,6 +17,7 @@
 - Added non-secret `origin` bootstrap/verification to the UASEP continuation procedure.
 - Added the reusable `remote-ref-audit` skill with inputs, steps, examples and limitations.
 - Resolved the two addressed PR #4 review threads.
+- Ran Gitleaks 8.30.1 across all 43 reachable commits and the current worktree; no leaks found.
 
 ## Research
 
