@@ -1,42 +1,24 @@
 # Shared Agent Status
 
 ## Current step
-- UASEP durable-state initialization and Stage 0 architecture audit are complete and committed; PR publication is blocked by unavailable GitHub CLI authentication.
+- Corrected UASEP architecture audit against the current remote repository; validation, commit, and PR delivery are pending.
 
 ## Active agent
-- `/root` owns `.uasep/state/*`, `STATUS.md`, `.agents/STATUS.md`, and `research/2026-08-30-uasep-architecture-audit.md` for this task.
+- `/root` owns `.uasep/state/*`, `STATUS.md`, `.agents/STATUS.md`, and `research/2026-08-30-uasep-architecture-audit.md` for this correction.
 
 ## Last completed step
-- Created the requested durable state, audited the architecture and repository baseline, identified the development stage, and recorded the prioritized completion backlog.
+- Fetched `JoTalbot/refund`, audited open PR #3 at `d85510a`, found no public inline/issue comments, and ran its full `npm run ci` in an isolated worktree.
 
 ## Changed files
-- `.uasep/state/STATUS.md`
-- `.uasep/state/PROJECT_STATE.md`
-- `.uasep/state/HANDOFF.md`
-- `research/2026-08-30-uasep-architecture-audit.md`
-- `STATUS.md`
-- `.agents/STATUS.md`
+- Pending correction: `.uasep/state/*`, `STATUS.md`, `.agents/STATUS.md`, and `research/2026-08-30-uasep-architecture-audit.md`.
 
 ## Research log
-- Applied `agent-continuity`, `research`, and `testing` skills.
-- Reviewed the existing architecture, source registry, agent protocol, skills, repository inventory, history, and Git configuration.
-- Selected Git-versioned Markdown state because it is durable, non-sensitive, and compatible with the repository's existing status/handoff process.
-- UASEP-specific public documentation lookup was attempted but unavailable (HTTP 401); no unverifiable external convention was assumed.
+- The earlier audit was local-branch-only and incorrectly classified the whole project as documentation-only.
+- `origin/main` remains the Stage 0 documentation baseline; PR #3 is an unmerged Stage 0–2 implementation candidate with domain, API, worker, migrations, tests, Terraform skeleton and runbook.
+- Public GitHub API returned no inline or issue comments on PR #3. `npm ci && npm run ci` passed in an isolated checkout at `d85510a`.
 
 ## Blockers
-- The non-secret `origin` remote is configured for `JoTalbot/refund`, but GitHub CLI authentication is unavailable, so this environment cannot push or create its PR.
+- GitHub CLI authentication is unavailable for publishing this corrective branch and PR.
 
 ## Next step
-- Authenticate GitHub CLI or provide an authorized GitHub App/OIDC workflow, then complete ADRs and a CI-backed Stage 1 source-registry vertical slice.
-
-## Agent log format
-
-```
-Date:
-Agent:
-Task:
-Research:
-Changes:
-Tests:
-Next step:
-```
+- Commit this corrected checkpoint; then review/merge PR #3 with required CI enabled before production service binding or any provider connector work.

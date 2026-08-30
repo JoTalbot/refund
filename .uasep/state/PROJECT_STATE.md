@@ -1,68 +1,59 @@
 # UASEP Project State
 
-> Durable, non-sensitive checkpoint for continuing work from any ephemeral environment.
+> Durable, non-sensitive checkpoint. Repository state is recorded by ref so a continuation agent never mistakes an unmerged implementation for deployed or merged code.
 
-## Identity and checkpoint
+## Checkpoint identity
 
 | Field | Value |
 |---|---|
-| Repository | `JoTalbot/refund`; `origin` is configured as `https://github.com/JoTalbot/refund.git` |
-| Branch at audit | `work` |
-| Baseline commit | `2060cd0` (`Add testing skill`) |
+| GitHub repository | `JoTalbot/refund` |
+| Read-only remote used for audit | `https://github.com/JoTalbot/refund.git` |
+| Local audit branch | `work` at `a5b0555` before this correction |
+| Merged baseline | `origin/main` at `2060cd0` |
+| Open implementation candidate | PR [#3](https://github.com/JoTalbot/refund/pull/3), `origin/arena/01a028f5-refund` at `d85510a` |
 | Checkpoint date | 2026-08-30 |
-| Project stage | **Stage 0 — architecture and operating rules** |
 | State owner | `/root` |
-| Sensitive data | None; this state deliberately contains no credentials, customer data, tokens, or artifact contents |
+| Sensitive data | None; no credentials, customer data, tokens, or runtime artifacts are recorded |
 
-## Scope confirmed from `README.md`
+## Correct development-stage assessment
 
-The planned product is a legitimate refund-operations platform: it uses approved catalog sources, verifies ownership of real orders, evaluates return eligibility, and submits provider requests only after human approval. It explicitly excludes fraudulent claims, bypassing platform controls, and use of third-party accounts.
+The previous checkpoint incorrectly audited only the local branch and described the entire project as documentation-only. That classification applies **only to `main` at `2060cd0`**. It does not describe the current GitHub work in PR #3.
 
-## Architecture audit
-
-### Present and coherent design decisions
-
-| Area | Current design | Audit assessment |
+| Ref | Stage | Evidence and interpretation |
 |---|---|---|
-| Product boundaries | Approved sources, genuine owned/administered orders, human-reviewed returns | Clear and safety-aligned. |
-| Ingestion | Source Registry allowlist; API/feed/export before permitted HTML; provenance, rate limits, idempotent upserts | Sound; implementation must make `approved` status an enforced gate. |
-| Returns | Explicit finite-state lifecycle; attestation, policy snapshot, approver-only submission, idempotency key | Sound safety model; formal transition table and tests are still required. |
-| Durability | PostgreSQL, object storage, Temporal, transactional outbox, leases and idempotent consumers | Appropriate for ephemeral workers; no deployment declaration exists yet. |
-| Security | RBAC, step-up for privileged approval, secret manager with workload identity, separate encrypted PII | Correct target architecture; no concrete identity/retention/control implementation exists yet. |
-| Auditability | Append-only events plus WORM archive, evidence checksums, trace IDs | Appropriate target; tamper-evidence/retention implementation and verification remain open. |
-| Delivery | Git/PR workflow and agent skills | Process documents exist, but remote, CI, branch protection, secret/dependency scanning and IaC are absent from this checkout. |
+| `origin/main` | Stage 0 planning baseline | Agent process, architecture, source-research and skills documentation; no runtime implementation. |
+| PR #3 / `origin/arena/01a028f5-refund` | **Unmerged Stage 0–2 implementation candidate** | TypeScript workspaces, domain controls, HTTP API, worker, PostgreSQL migrations, fixtures, Terraform skeleton, CI template, deployment runbook, and tests are present. |
+| Production | Not established | PR #3 documents unbound live PostgreSQL, Temporal, object storage, OIDC deployment binding, and no marketplace connector. No production deployment evidence was audited. |
 
-### Repository inventory
+## PR #3 architecture audit
 
-- The repository contains only planning documentation and agent process assets: `README.md`, `AGENTS.md`, `docs/`, `research/`, and `.agents/`.
-- There is no application source directory, package/dependency manifest, database migration, API schema, workflow definition, container build, infrastructure declaration, CI workflow, or test file. The non-secret `origin` remote is configured, but no GitHub CLI authentication is available in this environment.
-- The architecture document identifies TypeScript and Python alternatives but makes no binding ADR. The recommended TypeScript path is documented, not selected.
-- The source register is a policy and research list, not a populated operational allowlist. No provider authorization is recorded.
+### Confirmed implementation and controls
 
-### Findings, risks, and required resolution
+| Area | Audit result |
+|---|---|
+| Approval and money boundary | Domain package has a two-person approval gate, idempotency controls and audited state transitions; provider actions remain manual-guidance only. |
+| Source authorization | Registry fixtures and checks keep `aliexpress-ua` and `shopify-merchant` in `draft`; no marketplace HTTP connector is included. |
+| Data durability | PostgreSQL migrations, SQL snapshot/rehydration, jobs/import runs, transactional outbox, object-store port, PII erasure and legal hold are implemented as a foundation. |
+| Security | RBAC, verified OIDC/JWKS handling, structured redacted logs, secret scanning, connector prohibition, and Terraform GitHub OIDC skeleton are present. |
+| Delivery | `npm run ci` is defined and passed in an isolated checkout of PR #3. The GitHub Actions workflow is intentionally a template under `docs/ci/`, so repository-owner action is still required to activate CI. |
+| Runtime bindings | Live managed PostgreSQL, secret manager, Temporal, object storage and production identity are intentionally unbound; they must be supplied through reviewed deployment configuration, never Git secrets. |
 
-| Priority | Finding | Consequence if unresolved | Required resolution |
-|---|---|---|---|
-| P0 | The GitHub remote is configured, but GitHub CLI authentication and protected-branch/PR access are not available in this environment. | Cannot create a PR or push the audit branch from this environment. | Authenticate GitHub CLI or provide a GitHub App/OIDC workflow with permission to push a feature branch and create a PR; verify branch protection outside this checkout. |
-| P0 | Money-affecting approval, idempotency, and immutable audit controls are design-only. | A future implementation could submit duplicate or unapproved provider actions. | Implement an approval gate, unique/provider idempotency persistence, append-only audit writer, and transition tests before any provider submission. |
-| P0 | No source registry data model or enforcement exists. | An unapproved connector could be introduced or run. | Implement the registry and require `approved` status plus recorded permission basis in every ingestion run. |
-| P1 | No application skeleton, migrations, API contracts, IaC, CI, or automated tests exist. | The architecture cannot yet be deployed or validated. | Establish the Stage 1 vertical slice with repeatable local/CI validation and declarative managed-service infrastructure. |
-| P1 | No ADR selects language, deployment platform, temporal topology, tenancy model, or identity provider. | Teams may implement incompatible foundations. | Record reviewed ADRs before scaffolding. |
-| P1 | Data lifecycle needs concrete policies. | PII/evidence handling could violate minimization, retention, erasure, or legal-hold duties. | Define classifications, retention/erasure procedures, encryption/key ownership, access reviews, and audit archive verification. |
-| P2 | Existing source/repository research is dated 2026-08-22. | Provider terms/API behavior may have changed. | Revalidate each proposed source/API immediately before enabling it and retain a dated authorization record. |
-| P2 | UASEP has no repository-local specification and the public lookup was unavailable. | Future workers may interpret the durable-state format differently. | Treat these three state files as the current contract; replace/extend only after an authoritative UASEP specification is available. |
+### Review scope and result
 
-## Recommended target sequence
+- GitHub public API was queried for open PRs and review/issue comments. PR #3 is open; no inline review comments or issue comments were returned at audit time.
+- An isolated worktree at `d85510a` ran `npm ci && npm run ci` successfully. This validates the candidate code at that SHA, **not** `main`, `work`, a deployed environment, or a provider integration.
 
-1. Complete delivery foundation: authorized GitHub remote, protected-branch policy, CI, secret/dependency/license scanning, CODEOWNERS, and ADRs.
-2. Implement one approved catalog vertical slice: registry → authorized feed/API → normalized product and observation → provenance/evidence → parser/schema tests.
-3. Implement internal case management with no external provider submission: order ownership verification, snapshots, eligibility, evidence, RBAC, audited state machine.
-4. Add one merchant-controlled, sandboxed return integration behind human approval, durable idempotency, reconciliation, and sandbox tests.
-5. Perform resilience and compliance hardening: restore/worker-loss exercises, retention/DLP, SLOs, security review, and periodic source-policy revalidation.
+## Prioritized completion backlog
 
-## Research record
+1. **P0 — merge gate:** complete review of PR #3, require its CI in GitHub, and merge only through the protected branch. The current CI template must be installed at `.github/workflows/ci.yml` by an authorized repository owner.
+2. **P0 — deployment safety:** bind managed PostgreSQL/PITR, external WORM audit archive, secret manager, production OIDC and monitored worker using Terraform/CI OIDC; perform restore and lost-worker drills before production data.
+3. **P0 — authorization enforcement:** retain `draft` source blocks and manual-only provider actions until a merchant-owned, contractually approved source has a documented approval record and OAuth/least-privilege scopes.
+4. **P1 — first approved integration:** use a merchant-controlled Shopify sandbox, implement human approval, persistent provider idempotency, webhook signature verification and reconciliation tests; do not implement an AliExpress connector.
+5. **P1 — operations:** establish SLOs, alerting, access review, DLP/retention jobs, legal review cadence and production runbooks.
+6. **P2 — architecture governance:** create ADRs for tenancy, deployment topology, Temporal service choice, WORM verification and key ownership before widening scope.
 
-- Reviewed repository-local architecture and source research, agent protocol, roles, and available skills.
-- Applied `agent-continuity` for non-sensitive durable handoff, `research` for the audit sequence, and `testing` for validation planning.
-- Attempted a public search for a UASEP durable-state specification; it failed with HTTP 401. No external source is asserted as authoritative.
-- Selected a small Markdown state contract because it is versioned in Git, legible in a fresh environment, contains no secrets/runtime state, and matches the repository's existing status/handoff conventions.
+## Research and method
+
+- Read root instructions, shared status, applicable `agent-continuity`, `research`, and `testing` skills, local architecture/source documents, and the open remote PR.
+- Fetched all remote branches, inspected the PR diff and its architecture, threat-model, runbook, handoff and package scripts.
+- Public UASEP-format lookup remains unavailable (HTTP 401), so the requested Markdown files remain the repository-compatible state contract.

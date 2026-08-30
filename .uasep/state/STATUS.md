@@ -2,9 +2,9 @@
 
 - **Updated:** 2026-08-30
 - **Active agent:** `/root`
-- **Task:** Establish UASEP durable project state and complete the initial architecture audit.
-- **Phase:** Discovery and architecture baseline (Stage 0).
-- **Current step:** Audit and durable-state documentation complete; validation, commit, and PR creation follow.
+- **Task:** Correct the UASEP architecture audit using current remote GitHub state.
+- **Phase:** Stage 0–2 implementation candidate review; not merged or deployed.
+- **Current step:** Remote audit and validation are complete; commit and PR delivery follow.
 - **File ownership:** `.uasep/state/*`, `STATUS.md`, `.agents/STATUS.md`, `research/2026-08-30-uasep-architecture-audit.md`.
-- **Blockers:** GitHub `origin` is configured for `JoTalbot/refund`, but GitHub CLI authentication is unavailable; external UASEP documentation lookup was unavailable because the web tool returned HTTP 401.
-- **Next step:** Authenticate GitHub CLI or provide an authorized GitHub App/OIDC workflow, then establish the Stage 1 delivery foundation through a protected-branch PR.
+- **Blockers:** GitHub CLI authentication is unavailable for pushing this corrective branch/creating its PR. Public remote reads succeeded.
+- **Next step:** Activate required CI and review/merge PR #3 through the protected branch; then bind managed production services and run recovery drills.
